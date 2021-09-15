@@ -103,5 +103,5 @@ Oliver Michels, Simone Kotthaus, Stevan Earl, Sungsoo Jo, Valéry Masson, Winsto
 
 Mathew Lipson acknowledges the input from all co-authors, plus the guidance and suggestions from Andy Pitman, Gab Abramowitz, Anna Ukkola, Arden Burrell and Paola Petrelli.
 
-Mathew is supported by supported by UNSW Sydney and the Australian Research Council (ARC) Centre of Excellence for Climate System Science (grant CE110001028).
+Mathew is supported by supported by UNSW Sydney, the Australian Research Council (ARC) Centre of Excellence for Climate System Science (grant CE110001028) and ARC Centre of Excellence for Climate Extremes (grant CE170100023).
 
