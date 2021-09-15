@@ -9,9 +9,9 @@ gap filled dataset for each of the 20 sites at 30 and 60 minute resolutions (dep
 
 This is the code base. Input data (i.e. from observing groups, ERA5, WFDE5 and other global datasets) is held seperately.
 
-Plots are available at: https://urban-plumber.github.io/sites
+Output plots are available at https://urban-plumber.github.io/sites or archived at https://doi.org/10.5281/zenodo.5507036.
 
-Processed data are available at: XXXXX
+Output timeseries data are available at: XXXXX
 
 ## Included files
 
@@ -30,7 +30,7 @@ Processed data are available at: XXXXX
 
 ## Usage
 
-Code is written in Python 3.8 with dependencies including xarray, pandas, statsmodels, matplotlib, ephem and cartopy.
+Code is written in Python 3.8 with dependencies including numpy, pandas, xarray, statsmodels, matplotlib, ephem and cartopy.
 
 #### For processing all sites
 
@@ -101,7 +101,7 @@ Oliver Michels, Simone Kotthaus, Stevan Earl, Sungsoo Jo, Valéry Masson, Winsto
 
 ## Acknowledgements
 
-Mathew Lipson acknowledges the input from all co-authors, plus the guidance and suggestions from Gab Abramowitz, Anna Ukkola and Arden Burrell at UNSW Sydney.
+Mathew Lipson acknowledges the input from all co-authors, plus the guidance and suggestions from Andy Pitman, Gab Abramowitz, Anna Ukkola, Arden Burrell and Paola Petrelli.
 
 Mathew is supported by supported by UNSW Sydney and the Australian Research Council (ARC) Centre of Excellence for Climate System Science (grant CE110001028).
 

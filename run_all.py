@@ -23,7 +23,6 @@ import pandas as pd
 oshome=os.getenv('HOME')
 projpath = f'{oshome}/git/urban-plumber_pipeline'            # root of repository
 datapath = f'{oshome}/git/urban-plumber_pipeline/input_data' # raw data path (site data, global data)
-webpath  = f'{oshome}/git/urban-plumber.github.io'
 
 sitelist = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
             'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','MX-Escandon','NL-Amsterdam',

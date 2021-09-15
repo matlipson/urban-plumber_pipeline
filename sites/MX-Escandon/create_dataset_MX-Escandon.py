@@ -130,7 +130,7 @@ def main():
         fpath = f'{sitepath}/timeseries/{sitename}_raw_observations_{siteattrs["out_suffix"]}.nc'
         raw_ds = xr.open_dataset(fpath)
         # special case for Escandon (for 2006 LWdown obs)
-        fpath = f'{sitepath}/timeseries/{sitename}_raw2006_observations_{siteattrs["out_suffix"]}.nc'
+        fpath = f'{sitepath}/timeseries/{sitename}_raw2006_observations.nc'
         raw2006 = xr.open_dataset(fpath)
 
     if create_rain_file:

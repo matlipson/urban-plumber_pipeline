@@ -2339,7 +2339,7 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
             df['Tair'] = plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,sitepath,sample,metric)
 
         if clean['Qair'].dropna().count() > 1:
-            flux,units,shift = 'Qair','',0
+            flux,units,shift = 'Qair','kg/kg',0
             df['Qair'] = plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,sitepath,sample,metric)
 
         if clean['PSurf'].dropna().count() > 1:
@@ -2547,7 +2547,7 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
             ax.set_title('b)',loc='left')
         else:
             fig, ax = plt.subplots(1,1,figsize=(8,4))
-            ax.set_title(f'{sitename}: {flux} {sample}')
+            ax.set_title(f'{sitename}: mean diurnal {flux} ({sample})', fontsize=10)
 
         ax.text(0.99,0.99, f'period: {sdate} - {edate}', 
             va='top', ha='right', fontsize=8, transform=ax.transAxes, color='black')
@@ -2567,6 +2567,7 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
         ax.set_xticks(['%s:00' %str(x).zfill(2) for x in range(0,24,2)])
         ax.set_xlim(['00:00','23:59:59'])
         ax.set_xlabel('time (UTC)')
+        ax.set_ylabel(f'{flux} [{units}]')
 
         ax.grid(lw=0.5,color='0.8',zorder=-1)
         ax.legend(loc='upper left',fontsize=7)
@@ -4285,8 +4286,8 @@ def create_markdown_observations(ds,siteattrs):
 | [![Region]({site_region})]({site_region})  <sub>Regional map. © OpenStreetMap</sub>    | [![site_map]({site_map})]({site_map}) <sub>Site map with 500 m radius. © OpenStreetMap</sub>    |
 | [![site_photo]({site_photo})]({site_photo}) <sub>Site photo. © {photo_source}</sub>    | [![site_sat]({site_sat})]({site_sat}) <sub>Site aerial photo with 500 m radius. © OpenStreetMap, Microsoft</sub>    |
 
-<sub>Maps developed based on:
-    Hrisko, J. (2020). Geographic Visualizations in Python with Cartopy. Maker Portal. https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy</sub> 
+<sub>Maps developed from:
+    Hrisko, J. (2020). [Geographic Visualizations in Python with Cartopy](https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy). Maker Portal.</sub> 
 
 ## Site characteristics
 
