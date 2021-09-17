@@ -89,7 +89,7 @@ local_utc_offset_hours = -6
 long_sitename = 'KUOM Tall Tower, Minneapolis, Minnesota, United States'
 obs_contact = 'Joe McFadden (mcfadden@ucsb.edu) University of California, Santa Barbara'
 obs_reference = 'Peters, Hiller, McFadden (2011): https://doi.org/10.1029/2010JG001463; Menzer and McFadden (2017): https://doi.org/10.1016/j.atmosenv.2017.09.049'
-obs_comment = 'Residential sectors (285°-75°) of Minneapolis KUOM tower. Air pressure (PSurf) from Minneapolis-Saint Paul International Airport. Radiation components (SWdown,SWup,LWdown,LWup) measured at 2 m above ground level, not from tower as other variables. Tsoil at 5cm depth. Tower fluxes from original dataset which are flagged 2 excluded.'
+obs_comment = 'Residential sectors (285°-75°) of Minneapolis KUOM tower. Air pressure (PSurf) from Minneapolis-Saint Paul International Airport. Radiation components (SWdown,SWup,LWdown,LWup) measured at 2 m above ground level, not from tower as other variables. SoilTemp at 5cm depth. Tower fluxes from original dataset which are flagged 2 excluded.'
 photo_source='J. McFadden'
 history = 'v0.9 (2021-09-08): beta issue'
 

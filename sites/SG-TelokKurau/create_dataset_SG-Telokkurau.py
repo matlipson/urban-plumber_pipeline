@@ -88,9 +88,9 @@ sitedata_suffix = 'v1'
 
 local_utc_offset_hours = 8.0
 long_sitename = 'Telok Kurau, Singapore'
-obs_contact = 'Eric Velasco: evelasco@mce2.org, he_velasco2003@yahoo.com; Matthias Roth: geomr@nus.edu.sg'
+obs_contact = 'Eric Velasco (evelasco@mce2.org, he_velasco2003@yahoo.com), Matthias Roth (geomr@nus.edu.sg)'
 obs_reference = 'Roth, Jansson and Velasco (2017) https://doi.org/10.1002/joc.4873; Velasco, Roth, Tan, Quak, Nabarro, Norford. (2013) https://doi.org/10.5194/acp-13-10185-2013; Flux tower website: https://www.nusurbanclimate.com/tkfluxtowersingapore' 
-obs_comment = 'ERA5 data for gap-filling is from adjacent grid over land. Soil temperature is at 2cm. Near surface air temperature at 2m.'
+obs_comment = 'ERA5 data for gap-filling is from adjacent grid over land. Near surface air temperature at 2m. SoilTemp is at 2cm depth.'
 photo_source='M. Roth'
 history = 'v0.9 (2021-09-08): beta issue'
 
@@ -201,7 +201,7 @@ def import_obs(sitedata,siteattrs):
                         pressure = raw['Ambient Pressure (kPa)']*1000.,
                         air_density = raw['Den. Air (kg/m3)']),
             Tair2m = raw['Tair ground (degC)']+273.15,
-            SoilTemp = raw['Tsoil_2cm (degC)']+273.15,
+            SoilTemp = raw['Tsoil_2cm (degC)']+273.15, # 2cm depth
             )
 
     # create qc flags, with 0=observed, 1=gap-filled by obsevations, 2=gap-filled by era-derived, 3=missing

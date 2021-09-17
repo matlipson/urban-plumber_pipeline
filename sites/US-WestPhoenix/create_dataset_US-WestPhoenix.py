@@ -89,7 +89,7 @@ local_utc_offset_hours = -7.0
 long_sitename = 'West Phoenix, Arizona, United States'
 obs_contact = 'Stevan Earl: caplter.data@asu.edu, Winston Chow: winstonchow@smu.edu.sg'
 obs_reference = 'Chow (2017): https://doi.org/10.6073/pasta/fed17d67583eda16c439216ca40b0669; Chow et al (2014): https://doi.org/10.1002/joc.3947'
-obs_comment = ''
+obs_comment = 'SoilTemp at 2cm depth.'
 photo_source='S. Earl'
 history = 'v0.9 (2021-09-08): beta issue'
 

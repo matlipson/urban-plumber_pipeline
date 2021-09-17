@@ -89,7 +89,7 @@ local_utc_offset_hours = -5
 long_sitename = 'Cub Hill, Baltimore, United States'
 obs_contact = 'Ben Crawford (benjamin.crawford@ucdenver.edu), Sue Grimmond (c.s.grimmond@reading.ac.uk)'
 obs_reference = 'Crawford, Grimmond and Christen (2011): https://doi.org/10.1016/j.atmosenv.2010.11.017'
-obs_comment = 'Hourly rainfall from Baltimore Washington International Airport where available'
+obs_comment = 'Hourly rainfall from Baltimore Washington International Airport where available. SoilTemp at 10cm depth.'
 photo_source='[Crawford et al. (2011)](https://doi.org/10.1016/j.atmosenv.2010.11.017)'
 history = 'v0.9 (2021-09-08): beta issue'
 

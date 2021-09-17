@@ -9,9 +9,11 @@ gap filled dataset for each of the 20 sites at 30 and 60 minute resolutions (dep
 
 This is the code base. Input data (i.e. from observing groups, ERA5, WFDE5 and other global datasets) is held seperately.
 
-Output plots are available at https://urban-plumber.github.io/sites or archived at https://doi.org/10.5281/zenodo.5507036.
+Timeseries plots are available at https://urban-plumber.github.io/sites ([archive](https://doi.org/10.5281/zenodo.5507036)).
 
-Output timeseries data are available at: XXXXX
+Code for associated manuscript figures are available at https://doi.org/10.5281/zenodo.5508694
+
+Timeseries output data are not yet publicly available.
 
 ## Included files
 
@@ -20,17 +22,15 @@ Output timeseries data are available at: XXXXX
  - `qc_observations`: quality control processing
  - `convert_nc_to_text.py`: for converting previously created netcdf output to text format (for convenience)
  - `plot_sitemaps.py`: for plotting regional and local map images
- - `00_SiteList.xls`: a summary of site characteristics (for convenience - pipeline uses seperate sitedata csv files to inform timeseries output)
  - in `sites/SITENAME/`:
     - `create_dataset_SITENAME`: site specific wrapper for setting site information, importing site observations and calling pipeline functions to process and create output.
     - `SITENAME_sitedata_vX.csv`: site specific numerical metadata, e.g. latitude, longitude, surface cover fractions, morphology, population density etc. Includes sources.
- - in `manuscript_figures/`:
-    - `manuscript_figX.py`: plots each of the figures from the associated manuscript (when input data is available)
-    - `figure_data/` contains pre-processed data for Figure 2 (ERA5_cities_grump.csv) and Figure 5 (fig5_METRIC.csv).
 
 ## Usage
 
 Code is written in Python 3.8 with dependencies including numpy, pandas, xarray, statsmodels, matplotlib, ephem and cartopy.
+
+The folder input_data is required for processing (not included in this repository).
 
 #### For processing all sites
 
@@ -54,12 +54,6 @@ Optional arguments for running `create_dataset_SITENAME.py` are:
  - `-- global`:     provides site characteristics from global datasets (large files)
  - `-- existing`:   loads previously processed nc files (if running after processing)
 
-#### For reproducing manuscript figures
-
- - use `manuscript_figures/manuscript_figX.py`
- - edit the projpath to point to this repository, and the datapath to point to input data
- - type `manuscript_figures/manuscript_figX.py`
-
 ## Outputs
 
 When run the following outputs are produced for each of the 20 sites within the `site/SITENAME` folder:
@@ -69,6 +63,7 @@ When run the following outputs are produced for each of the 20 sites within the 
  - `timeseries/`:
     - `SITENAME_raw_observations_vX.nc`: site observed timeseries before project-wide quality control.
     - `SITENAME_clean_observations_vX.nc`: site observed timeseries after project-wide quality control. Includes site characteristic metadata.
+    - `SITENAME_metforcing_vX.nc`: site observed timeseries after project-wide quality control and gap filling.
     - `SITENAME_era5_corrected_vX.nc`: site ERA5 surface data (1990-2020) with bias corrections as applied in the final dataset.
     - `SITENAME_era5_linear_vX.nc`: site ERA5 surface data (1990-2020) with bias corrections using a linear regression on observations.
     - `SITENAME_ghcnd_precip.csv`: continuous daily precipitation timeseries using the nearest available GHCND station observations.

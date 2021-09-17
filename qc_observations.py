@@ -24,6 +24,8 @@ import pipeline_functions
 
 pd.plotting.register_matplotlib_converters()
 
+img_fmt = 'png'
+
 ################################################################################
 
 def main(ds, sitedata, siteattrs, sitepath, plotdetail=False):
@@ -258,15 +260,10 @@ def clean_out_of_range(df,siteattrs):
     # remove ranges
     clean = df.where ( (df >= alma_ranges.loc['min',:]) & (df <= alma_ranges.loc['max',:]) )
 
-    # remove RH above 100
+    # remove RH above 101 (requires Qair, Tair and PSurf to be valid)
     RH = pipeline_functions.convert_qair_to_rh(clean.Qair, clean.Tair, clean.PSurf)
-    clean['Qair'] = clean['Qair'].where(RH<101)
-
-    # # also remove SWup where SWdown out of range, and vice versa
-    # clean['SWup'] = clean['SWup'].where( (df['SWdown'] >= alma_ranges.loc['min','SWdown']) & (df['SWdown'] <= alma_ranges.loc['max','SWdown']) )
-
-    # clean['SWdown'] = clean['SWdown'].where( (df['SWup'] >= alma_ranges.loc['min','SWup']) & (df['SWup'] <= alma_ranges.loc['max','SWup']) )
-
+    clean['Qair'] = np.where(RH>101,np.nan,clean['Qair'])
+ 
     dirty = df.where(clean.isna())
     print('out of range: \n%s\n' %dirty.count())
 
@@ -532,7 +529,7 @@ def plot_all_obs(clean,dirty,stats,sitename,sitepath,all_fluxes,qc_list,saveplot
         ax.set_xlabel(None)
 
     if saveplot:
-        fig.savefig('%s/obs_plots/all_obs_qc.png' %(sitepath), dpi=200,bbox_inches='tight')
+        fig.savefig(f'{sitepath}/obs_plots/all_obs_qc.{img_fmt}', dpi=200,bbox_inches='tight')
     else:
         plt.show()
 
@@ -557,7 +554,7 @@ def plot_qc_timeseries(ds,clean,dirty,plt_str,flux,sitename,sitepath,saveplot=Tr
     ax.set_xlim((ds.time_coverage_start,ds.time_coverage_end))
 
     if saveplot==True:
-        fig.savefig('%s/obs_plots/%s_obs_qc_ts.png' %(sitepath,flux), dpi=200,bbox_inches='tight')
+        fig.savefig(f'{sitepath}/obs_plots/{flux}_obs_qc_ts.{img_fmt}', dpi=150,bbox_inches='tight')
     else:
         plt.show()
 
@@ -600,7 +597,7 @@ def plot_qc_diurnal(ds,local_clean,local_dirty,plt_str,flux,sitename,sitepath,sa
     ax.set_xticks([str(x).zfill(2)+':00' for x in range(0,24,3)] )
 
     if saveplot==True:
-        fig.savefig('%s/obs_plots/%s_obs_qc_diurnal.png' %(sitepath,flux), dpi=200,bbox_inches='tight')
+        fig.savefig(f'{sitepath}/obs_plots/{flux}_obs_qc_diurnal.{img_fmt}', dpi=150,bbox_inches='tight')
     else:
         plt.show()
 
@@ -731,7 +728,7 @@ def calc_sigma_data(alldata, sigma_vals, sitepath, window=30, plotdetail=False):
 
                         fig.suptitle(title_text ,x=0.5,y=0.92, fontsize=16)
                         # plt.show()
-                        plt.savefig(f'{sitepath}/obs_plots/{flux}_qc_sigma_{nloop}_{nloop+window}.png' , dpi=300,bbox_inches='tight')
+                        plt.savefig(f'{sitepath}/obs_plots/{flux}_qc_sigma_{nloop}_{nloop+window}.{img_fmt}' , dpi=300,bbox_inches='tight')
                         plt.close('all')
 
             #########################

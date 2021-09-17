@@ -90,7 +90,7 @@ local_utc_offset_hours = -8
 long_sitename = 'Sunset, Vancouver, Canada'
 obs_contact = 'Andreas Christen (andreas.christen@meteo.uni-freiburg.de) Albert-Ludwigs-Universitaet Freiburg'
 obs_reference = 'Christen, Coops, Crawford, Kellett, Liss, Olchovski, Tooke, van der Laan, Voogt (2011): https://doi.org/10.1016/j.atmosenv.2011.07.040; Crawford and Christen (2015): https://doi.org/10.1007/s00704-014-1124-0'
-obs_comment = 'Gapfilling for SWdown, LWdown, PSurf by Oliver Michels based on local observations and regressions'
+obs_comment = 'Gapfilling for SWdown, LWdown, PSurf by Oliver Michels based on local observations and regressions. SoilTemp at 5cm depth.'
 photo_source='A. Christen'
 history = 'v0.9 (2021-09-08): beta issue'
 

@@ -44,9 +44,10 @@ wfdepath = '/g/data/rt52/era5-derived/wfde5/v1-1/cru'
 # USER INPUTS
 ##########################################################################
 
-missing_float     = -9999.
-missing_int8      = -128
-wind_hgt          = 10.     # era5 wind height variable (100m has poor diurnal pattern, use 10m)
+missing_float = -9999.
+missing_int8  = -128
+wind_hgt      = 10.     # era5 wind height variable (100m has poor diurnal pattern, use 10m)
+img_fmt       = 'png'   # image format
 
 ##########################################################################
 # main
@@ -75,7 +76,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         correct_era5_linear   = True
         create_filled_forcing = True
         create_analysis       = True
-        write_to_text         = False # can use seperate program if necessary (convert_nc_to_text.py)
+        write_to_text         = True # can also use seperate program if necessary (convert_nc_to_text.py)
     else:
         clean_obs_nc          = False
         correct_era5          = False
@@ -102,9 +103,9 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         print('setting clean attributes\n')
         clean_ds.attrs['time_analysis_start'] = raw_ds.attrs['time_coverage_start']
         clean_ds.attrs['timestep_number_analysis'] = raw_ds.attrs['timestep_number_analysis']
+        clean_ds = set_global_attributes(clean_ds,siteattrs,ds_type='clean_obs')
         clean_ds = set_variable_attributes(clean_ds)
         clean_ds = clean_ds.merge(assign_sitedata(siteattrs))
-        clean_ds = set_global_attributes(clean_ds,siteattrs,ds_type='clean_obs')
 
         print(f'writing cleaned observations to NetCDF\n')
         fpath = f'{sitepath}/timeseries/{sitename}_clean_observations_{siteattrs["out_suffix"]}.nc'
@@ -152,7 +153,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
 
         # ALMA
         print('convert ERA5 site raw datafile to ALMA standard variables')
-        era_ds = convert_era5_to_alma(era_native,sitename)
+        era_ds = convert_era5_to_alma(era_native,siteattrs,sitename)
 
         # make directories if necessary
         if not os.path.exists(f'{datapath}/{sitename}'):
@@ -172,6 +173,8 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
     if correct_era5:
         print('making corrections to ERA5 data based on local site information')
         corr_ds = calc_era5_corrections(era_ds,watch_ds,sitename,sitedata,sitepath,plot_bias='all',obs_ds=clean_ds)
+        corr_ds = set_global_attributes(era_ds,siteattrs,ds_type='era5_corrected')
+        corr_ds = set_variable_attributes(corr_ds)
         # write
         fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.nc'
         print(f'writing corrected era5 data to {fpath.split("/")[-1]}')
@@ -184,7 +187,8 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
     ######## CORRECT ERA5 USING LINEAR REGRESSION ########
     ##############################################################
     if correct_era5_linear:
-        lin_ds = calc_era5_linear_corrections(era_ds,watch_ds,clean_ds,sitename,sitedata,sitepath)
+        lin_ds = calc_era5_linear_corrections(era_ds,watch_ds,clean_ds,siteattrs,sitedata)
+        lin_ds = set_global_attributes(lin_ds,siteattrs,ds_type='era5_linear')
         lin_ds = set_variable_attributes(lin_ds)
         # write
         fpath = f'{sitepath}/timeseries/{sitename}_era5_linear_{siteattrs["out_suffix"]}.nc'
@@ -281,8 +285,8 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         print('setting attributes\n')
         filled_ds.attrs['time_analysis_start'] = clean_ds.attrs['time_coverage_start']
         filled_ds.attrs['timestep_number_analysis'] = clean_ds.attrs['timestep_number_analysis']
-        filled_ds = set_variable_attributes(filled_ds)
         filled_ds = set_global_attributes(filled_ds,siteattrs,ds_type='forcing')
+        filled_ds = set_variable_attributes(filled_ds)
 
         # print(f'writing filled observations to NetCDF\n')
         # fpath = f'{sitepath}/timeseries/{sitename}_filled_observations_{siteattrs["out_suffix"]}.nc'
@@ -313,12 +317,13 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         final_period = clean_ds.time_coverage_end
         forcing_ds = filled_ds.combine_first(era_to_fill_ds).sel(time=slice(None, final_period)) 
         forcing_ds = build_new_dataset_forcing(forcing_ds)
-        forcing_ds = forcing_ds.merge(assign_sitedata(siteattrs))
 
         print('setting forcing attributes\n')
         forcing_ds.attrs['time_analysis_start'] = pd.to_datetime(raw_ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
         forcing_ds.attrs['timestep_number_analysis'] = len(raw_ds.time)
         forcing_ds = set_global_attributes(forcing_ds,siteattrs,ds_type='forcing')
+        forcing_ds = set_variable_attributes(forcing_ds)
+        forcing_ds = forcing_ds.merge(assign_sitedata(siteattrs))
 
         # write
         fpath = f'{sitepath}/timeseries/{sitename}_metforcing_{siteattrs["out_suffix"]}.nc'
@@ -332,13 +337,22 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         forcing_ds = xr.open_dataset(f'{sitepath}/timeseries/{sitename}_metforcing_{siteattrs["out_suffix"]}.nc')
 
     if write_to_text:
-        print('writing clean obs to text file')
-        fpath = f'{sitepath}/{sitename}_clean_observations_{siteattrs["out_suffix"]}.txt'
-        write_netcdf_to_text_file(ds=clean_ds,fpath_out=fpath,ds_type='clean')
 
-        print('writing forcing to text file')
+        print('writing raw obs to text file')
+        fpath = f'{sitepath}/timeseries/{sitename}_raw_observations_{siteattrs["out_suffix"]}.txt'
+        write_netcdf_to_text_file(ds=raw_ds,fpath_out=fpath)
+
+        print('writing clean obs to text file')
+        fpath = f'{sitepath}/timeseries/{sitename}_clean_observations_{siteattrs["out_suffix"]}.txt'
+        write_netcdf_to_text_file(ds=clean_ds,fpath_out=fpath)
+
+        print('writing era5 corrected to text file')
+        fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.txt'
+        write_netcdf_to_text_file(ds=era_ds,fpath_out=fpath)
+
+        print('writing met forcing to text file')
         fpath = f'{sitepath}/timeseries/{sitename}_metforcing_{siteattrs["out_suffix"]}.txt'
-        write_netcdf_to_text_file(ds=forcing_ds,fpath_out=fpath,ds_type='forcing')
+        write_netcdf_to_text_file(ds=forcing_ds,fpath_out=fpath)
 
     # ##############################################################
     # ######## CREATE ANALYSIS FILES (for modelevaluation.org) ########
@@ -432,8 +446,8 @@ def set_raw_attributes(raw_ds, siteattrs):
     print('setting raw attributes\n')
     raw_ds.attrs['time_analysis_start'] = pd.to_datetime(raw_ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
     raw_ds.attrs['timestep_number_analysis'] = len(raw_ds.time)
-    raw_ds = set_variable_attributes(raw_ds)
     raw_ds = set_global_attributes(raw_ds,siteattrs,ds_type='raw_obs')
+    raw_ds = set_variable_attributes(raw_ds)
 
     print(f'writing raw observations to NetCDF\n')
     fpath = f'{sitepath}/timeseries/{sitename}_raw_observations_{siteattrs["out_suffix"]}.nc'
@@ -533,7 +547,7 @@ def get_era5_data(sitename,sitedata,syear,eyear,era5path,sitepath):
 
 ############################################################################
 
-def convert_era5_to_alma(era5,sitename):
+def convert_era5_to_alma(era5,siteattrs,sitename):
     '''
     opens ERA5 native datafile from site and converts to alma standard variables     
     '''
@@ -570,18 +584,7 @@ def convert_era5_to_alma(era5,sitename):
 
     ds = set_variable_attributes(ds)
 
-    ds.attrs['title'] = 'Uncorrected ERA5 surface data in ALMA form for %s' %sitename
-    ds.attrs['comment'] = '''ERA5 is gridded data with an assumed ground level in a grid. This file uses the assumed grid ground level, which may differ from an actual site.'''
-    ds.attrs['creator_name'] = __author__
-    ds.attrs['creator_email'] = __email__
-    ds.attrs['source'] = era5.source
-    ds.attrs['institution']  = 'Centre of Excellence for Climate System Science, University of New South Wales, Australia'
-    ds.attrs['date_created'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    ds.attrs['time_coverage_start'] = str(ds.time[0].values)[:19]
-    ds.attrs['time_coverage_end']   = str(ds.time[-1].values)[:19]
-    ds.attrs['featureType'] = 'timeSeries'
-    ds.attrs['references'] = 'ERA5: Copernicus Climate Change Service (C3S) (2017): https://cds.climate.copernicus.eu/cdsapp#!/home. NCI Australia: http://doi.org/10.25914/5f48874388857.'
-    ds.attrs['acknowledgements'] = 'Contains modified Copernicus Climate Change Service Information. Data from replica hosted by NCI Australia, with thanks to NCI and associates.'
+    ds = set_global_attributes(ds,siteattrs,ds_type='era5_raw')
 
     return ds
 
@@ -1158,9 +1161,9 @@ def rolling_hourly_bias_correction(flux,sitepath,era,obs,plot_bias='all',window=
         ax.set_title(f'{sitename} {flux}: hourly bias correction from ERA5')
 
     if (publication) and (flux=='Tair'):
-        fig.savefig(f'{sitepath}/era_correction/{sitename}_{flux}_hourlycorrection_{plot_bias}_fig4a.png',bbox_inches='tight',dpi=150)
+        fig.savefig(f'{sitepath}/era_correction/{sitename}_{flux}_hourlycorrection_{plot_bias}_fig4a.{img_fmt}',bbox_inches='tight',dpi=150)
     else:
-        fig.savefig(f'{sitepath}/era_correction/{sitename}_{flux}_hourlycorrection_{plot_bias}.png',bbox_inches='tight',dpi=150)
+        fig.savefig(f'{sitepath}/era_correction/{sitename}_{flux}_hourlycorrection_{plot_bias}.{img_fmt}',bbox_inches='tight',dpi=150)
     plt.close('all')
 
     print(f'saving {flux} bias correction to ERA5')
@@ -1407,7 +1410,7 @@ def plot_ghcnd_cumulative(sitepath,ser,s,missing):
     # ax.legend(loc='upper center',fontsize=7,bbox_to_anchor=(0.5,-0.05),ncol=2)
     ax.legend(loc='upper left',fontsize=7)
 
-    fig.savefig(f'{sitepath}/precip_plots/{sitename}_ghcnd_cumulative_precip.png',bbox_inches='tight',dpi=150)
+    fig.savefig(f'{sitepath}/precip_plots/{sitename}_ghcnd_cumulative_precip.{img_fmt}',bbox_inches='tight',dpi=150)
 
     return
 
@@ -1481,7 +1484,7 @@ def plot_snow_partitioning(obs_ds,forcing_ds,era_ds,sitepath,sitename):
     ax.set_ylim(0,None)
 
     # plt.show()
-    fig.savefig(f'{sitepath}/precip_plots/{sitename}_snow_correction.png', dpi=200,bbox_inches='tight')
+    fig.savefig(f'{sitepath}/precip_plots/{sitename}_snow_correction.{img_fmt}', dpi=150,bbox_inches='tight')
 
     # plt.show()
 
@@ -1526,9 +1529,12 @@ def calc_R(sim,obs):
 
 ###############################################################################
 
-def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,sitename,sitedata,sitepath):
+def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,siteattrs,sitedata):
 
-    corr_ds = era_ds.copy()
+    sitename = siteattrs['sitename']
+    sitepath = siteattrs['sitepath']
+
+    lin_ds = era_ds.copy()
 
     min_obs = 10
 
@@ -1539,43 +1545,43 @@ def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,sitename,sitedata,sitepa
         obs_wind = np.sqrt(obs_ds['Wind_N'].to_series()**2 + obs_ds['Wind_E'].to_series()**2)
         era_wind = era_ds['Wind'].to_series()
 
-        corr_ds['Wind'] = linear_debiasing('Wind',sitepath,era_wind,obs_wind)
+        lin_ds['Wind'].values = linear_debiasing('Wind',sitepath,era_wind,obs_wind)
 
         print('')
         print(f'mean observed wind speed: {obs_wind.mean():.2f} m/s')
-        print(f'mean wind speed change from {era_wind.mean():.2f} to {corr_ds.Wind.to_series().mean():.2f} m/s')
+        print(f'mean wind speed change from {era_wind.mean():.2f} to {lin_ds.Wind.to_series().mean():.2f} m/s')
 
         era_wdir = convert_uv_to_wdir(era_ds['Wind_E'],era_ds['Wind_N'])
-        corr_ds['Wind_E'].values = convert_wdir_to_uv(corr_ds['Wind'].values,era_wdir)[0]
-        corr_ds['Wind_N'].values = convert_wdir_to_uv(corr_ds['Wind'].values,era_wdir)[1]
+        lin_ds['Wind_E'].values = convert_wdir_to_uv(lin_ds['Wind'].values,era_wdir)[0]
+        lin_ds['Wind_N'].values = convert_wdir_to_uv(lin_ds['Wind'].values,era_wdir)[1]
 
     ################################################################################
 
     for key in ['Tair','PSurf','Qair','SWdown']:
-        print(f'\ncorrecting {key}')
+        print(f'\ncorrecting {key} linearly')
         if len(obs_ds[key].to_series().dropna().unique()) > min_obs:
             era = era_ds[key].to_series()
             obs = obs_ds[key].to_series()
-            corr_ds[key].values = linear_debiasing(key,sitepath,era,obs)
+            lin_ds[key].values = linear_debiasing(key,sitepath,era,obs)
 
     ################################################################################
 
     # fill NaN values in corrected dataset with zero
-    corr_ds['SWdown'].values = corr_ds['SWdown'].fillna(0.).values
+    lin_ds['SWdown'].values = lin_ds['SWdown'].fillna(0.).values
     # set negative values to zero
-    corr_ds['SWdown'].values = corr_ds['SWdown'].where(corr_ds['SWdown']>=0., 0.).values
+    lin_ds['SWdown'].values = lin_ds['SWdown'].where(lin_ds['SWdown']>=0., 0.).values
 
     # # setting very small values to zero
-    corr_ds.Rainf.values = corr_ds.Rainf.where(corr_ds.Rainf>1E-8,0.).values
-    corr_ds.Snowf.values = corr_ds.Snowf.where(corr_ds.Snowf>1E-8,0.).values
+    lin_ds.Rainf.values = lin_ds.Rainf.where(lin_ds.Rainf>1E-8,0.).values
+    lin_ds.Snowf.values = lin_ds.Snowf.where(lin_ds.Snowf>1E-8,0.).values
 
     if sitename in ['JP-Yoyogi']:
-        corr_ds['Qair'].values = corr_ds['Qair'].where(corr_ds['Qair']>=0.0001, 0.0001).values
+        lin_ds['Qair'].values = lin_ds['Qair'].where(lin_ds['Qair']>=0.0001, 0.0001).values
 
     ################################################################################
 
     key = 'LWdown'
-    print(f'\ncorrecting {key}')
+    print(f'\ncorrecting {key} linearlly')
     if sitename == 'MX-Escandon': # MX-Escandon has no LW in 2011 obs period, using 2006 observed data for bias correction
         print('Using LWdown from 2006 for bias correction at MX-Escandon')
         # obs_LWdown = xr.open_dataset(f'{sitepath}/MX-Escandon_era5_corr_v2006.nc')['LWdown']
@@ -1583,8 +1589,8 @@ def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,sitename,sitedata,sitepa
     else:
         obs_LWdown = obs_ds['LWdown']
 
-    # fix spurious LWdown era5 value at 2010-11-27 09:00 (at many sites)
     try:
+        print('remove spurious LWdown era5 value at 2010-11-27 09:00 (at many sites)')
         before = era_ds['LWdown'].loc[dict(time='2010-11-27 08:00')]
         after = era_ds['LWdown'].loc[dict(time='2010-11-27 10:00')]
         era_ds['LWdown'].loc[dict(time='2010-11-27 09:00')] = 0.5*(before+after)
@@ -1594,13 +1600,13 @@ def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,sitename,sitedata,sitepa
     if len(obs_LWdown.to_series().dropna().unique()) > min_obs:
         era = era_ds[key].to_series()
         obs = obs_LWdown.to_series()
-        corr_ds[key].values = linear_debiasing(key,sitepath,era,obs)
+        lin_ds[key].values = linear_debiasing(key,sitepath,era,obs)
 
-    print(f'mean Tair change from {era_ds["Tair"].mean().values-273.15:.1f} to {corr_ds["Tair"].mean().values-273.15:.1f} °C')
-    print(f'mean PSurf change from {era_ds["PSurf"].mean().values:.1f} to {corr_ds["PSurf"].mean().values:.1f} Pa')
-    print(f'mean Qair change from {era_ds["Qair"].mean().values:.4f} to {corr_ds["Qair"].mean().values:.4f} kg/kg')
-    print(f'mean SWdown change from {era_ds["SWdown"].mean().values:.1f} to {corr_ds["SWdown"].mean().values:.1f} W/m2')
-    print(f'mean LWdown change from {era_ds["LWdown"].mean().values:.1f} to {corr_ds["LWdown"].mean().values:.1f} W/m2')
+    print(f'mean Tair change from {era_ds["Tair"].mean().values-273.15:.1f} to {lin_ds["Tair"].mean().values-273.15:.1f} °C')
+    print(f'mean PSurf change from {era_ds["PSurf"].mean().values:.1f} to {lin_ds["PSurf"].mean().values:.1f} Pa')
+    print(f'mean Qair change from {era_ds["Qair"].mean().values:.4f} to {lin_ds["Qair"].mean().values:.4f} kg/kg')
+    print(f'mean SWdown change from {era_ds["SWdown"].mean().values:.1f} to {lin_ds["SWdown"].mean().values:.1f} W/m2')
+    print(f'mean LWdown change from {era_ds["LWdown"].mean().values:.1f} to {lin_ds["LWdown"].mean().values:.1f} W/m2')
 
     ################################################################################
 
@@ -1619,35 +1625,17 @@ def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,sitename,sitedata,sitepa
         },index=('min','max'))
 
     for key in alma_ranges.columns:
-        assert (corr_ds[key].values >= alma_ranges.loc['min',key]).all() and (corr_ds[key].values <= alma_ranges.loc['max',key]).all(), f'corrected {key} outside ALMA physical range: {float(corr_ds[key].min())}'
+        assert (lin_ds[key].values >= alma_ranges.loc['min',key]).all() and (lin_ds[key].values <= alma_ranges.loc['max',key]).all(), f'corrected {key} outside ALMA physical range: {float(lin_ds[key].min())}'
 
     ########## ANNOTATIONS ###########
 
-    corr_ds['site_ground_height'] = sitedata['ground_height']
-    corr_ds['site_ground_height'].attrs['units'] = 'm'
-    corr_ds['site_ground_height'].attrs['long_name'] = 'height of site above the sea level'
-
-    corr_ds['site_measurement_height'] = sitedata['measurement_height_above_ground']
-    corr_ds['site_measurement_height'].attrs['units'] = 'm'
-    corr_ds['site_measurement_height'].attrs['long_name'] = 'height of measurement above the site ground height'
-
-    corr_ds['era_lat'] = era_ds.latitude
-    corr_ds['era_lon'] = era_ds.longitude
-    corr_ds['era_wind_hgt'] = era_ds.era_wind_hgt
-
-    corr_ds.attrs['title'] = 'ERA5 surface data corrected for a site flux tower at: %s' %sitename
-    corr_ds.attrs['comment'] = f'''ERA5 is gridded data with an assumed ground level in a grid, which may differ from a site flux tower. This can affect temperature, humidity and other variables, which have been corrected in this file. Generated using Copernicus Climate Change Service Information {datetime.now().strftime("%Y")}'''
-    corr_ds.attrs['creator_name'] = __author__
-    corr_ds.attrs['creator_email'] = __email__
-    corr_ds.attrs['source'] = 'File: era5_to_site.py'
-    corr_ds.attrs['institution']  = 'Centre of Excellence for Climate System Science, UNSW Sydney, Australia'
-    corr_ds.attrs['date_created'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    corr_ds.attrs['time_coverage_start'] = str(corr_ds.time[0].values)[:19]
-    corr_ds.attrs['time_coverage_end']   = str(corr_ds.time[-1].values)[:19]
+    lin_ds['era_lat'] = era_ds.latitude
+    lin_ds['era_lon'] = era_ds.longitude
+    lin_ds['era_wind_hgt'] = era_ds.era_wind_hgt
 
     print('done correcting ERA5 data with obs')
 
-    return corr_ds
+    return lin_ds
 
 def linear_debiasing(flux,sitepath,era,obs):
     '''
@@ -1946,27 +1934,9 @@ def calc_era5_corrections(era_ds,watch_ds,sitename,sitedata,sitepath,
 
     ########## ANNOTATIONS ###########
 
-    corr_ds['site_ground_height'] = sitedata['ground_height']
-    corr_ds['site_ground_height'].attrs['units'] = 'm'
-    corr_ds['site_ground_height'].attrs['long_name'] = 'height of site above the sea level'
-
-    corr_ds['site_measurement_height'] = sitedata['measurement_height_above_ground']
-    corr_ds['site_measurement_height'].attrs['units'] = 'm'
-    corr_ds['site_measurement_height'].attrs['long_name'] = 'height of measurement above the site ground height'
-
     corr_ds['era_lat'] = era_ds.latitude
     corr_ds['era_lon'] = era_ds.longitude
     corr_ds['era_wind_hgt'] = era_ds.era_wind_hgt
-
-    corr_ds.attrs['title'] = 'ERA5 surface data corrected for a site flux tower at: %s' %sitename
-    corr_ds.attrs['comment'] = f'''ERA5 is gridded data with an assumed ground level in a grid, which may differ from a site flux tower. This can affect temperature, humidity and other variables, which have been corrected in this file. Generated using Copernicus Climate Change Service Information {datetime.now().strftime("%Y")}'''
-    corr_ds.attrs['creator_name'] = __author__
-    corr_ds.attrs['creator_email'] = __email__
-    corr_ds.attrs['source'] = 'File: era5_to_site.py'
-    corr_ds.attrs['institution']  = 'Centre of Excellence for Climate System Science, UNSW Sydney, Australia'
-    corr_ds.attrs['date_created'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    corr_ds.attrs['time_coverage_start'] = str(corr_ds.time[0].values)[:19]
-    corr_ds.attrs['time_coverage_end']   = str(corr_ds.time[-1].values)[:19]
 
     print('done correcting ERA5 data with obs')
 
@@ -2242,7 +2212,7 @@ def plot_forcing(datapath,siteattrs,forcing_ds, with_era=False,
         if with_era:
             plt.show()
         else:
-            fig.savefig(f'{sitepath}/obs_plots/{flux}_gapfilled_forcing.png',bbox_inches='tight',dpi=300)
+            fig.savefig(f'{sitepath}/obs_plots/{flux}_gapfilled_forcing.{img_fmt}',bbox_inches='tight',dpi=150)
 
         plt.close('all')
 
@@ -2261,21 +2231,21 @@ def test_out_of_sample(clean_ds,era_ds,watch_ds,sitedata,siteattrs,outfrac=0.2):
     in_ds = clean_ds.sel(time=slice(None,split))
     in_ds.attrs['time_analysis_start'] = pd.to_datetime(in_ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
     in_ds.attrs['timestep_number_analysis'] = len(in_ds.time)
-    in_ds = set_variable_attributes(in_ds)
     in_ds = set_global_attributes(in_ds,siteattrs,ds_type='raw_obs')
+    in_ds = set_variable_attributes(in_ds)
 
     out_ds = clean_ds.sel(time=slice(split,None))
     out_ds.attrs['time_analysis_start'] = pd.to_datetime(out_ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
     out_ds.attrs['timestep_number_analysis'] = len(out_ds.time)
-    out_ds = set_variable_attributes(out_ds)
     out_ds = set_global_attributes(out_ds,siteattrs,ds_type='raw_obs')
+    out_ds = set_variable_attributes(out_ds)
 
     print('creating new bias-corrected era5 using out of sample only')
     part_corr_ds = calc_era5_corrections(era_ds,watch_ds,sitename,sitedata,sitepath,
-        plot_bias='out',obs_ds=in_ds.copy() )
+        plot_bias='out',obs_ds=in_ds )
 
     print('creating new bias-corrected era5 using out of sample only (linear regression method)')
-    part_lin_ds = calc_era5_linear_corrections(era_ds,watch_ds,in_ds,sitename,sitedata,sitepath)
+    part_lin_ds = calc_era5_linear_corrections(era_ds,watch_ds,in_ds,siteattrs,sitedata)
 
     # # check correction and plot
     # print('in sample corrections')
@@ -2294,6 +2264,7 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
     fluxes2 = ['SWdown','LWdown','Tair','Qair','PSurf','Rainf','Wind']
     
     if resample_obs_to_era:
+        print('resampling clean')
         clean = clean_ds[fluxes1].to_dataframe().resample('60Min',closed='right',label='right').mean()
         sdate, edate = clean.index[0], clean.index[-1]
         # compare daytime SWdown only
@@ -2301,10 +2272,21 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
         # create wind speed from components for comparison with WATCH
         clean['Wind'] = np.sqrt(clean['Wind_N']**2 + clean['Wind_E']**2)
         # match continuous datasets to observation periods
-        corr = corr_ds[fluxes2].to_dataframe()[sdate:edate].where(clean.notna())
-        era = era_ds[fluxes2].to_dataframe()[sdate:edate].where(clean.notna())
-        watch = watch_ds[fluxes2].to_dataframe()[sdate:edate].where(clean.notna())
-        lin = lin_ds[fluxes2].to_dataframe()[sdate:edate].where(clean.notna())
+        print('resampling corr')
+        corr = corr_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
+        print('resampling era')
+        era = era_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
+        print('resampling watch')
+        watch = watch_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
+        print('resampling lin')
+        print('1\n',lin_ds)
+        print('2\n',fluxes2)
+        print('3\n',lin_ds[fluxes2].sel(time=slice(sdate,edate)))
+        print('4\n',lin_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe())
+        tmp = lin_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe()
+        print('final')
+        lin = tmp.where(clean.notna())
+        print('done resampling')
 
     else: # resample era to match obs (not used)
         clean = clean_ds[fluxes1].to_dataframe()
@@ -2401,6 +2383,8 @@ def compare_corrected_errors_escandon(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,si
 
 def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,sitepath,sample,metric,plotwatch=True,publication=False):
 
+    print(f'plotting {flux} comparison for {sample} {metric}')
+
     if sitename in ['GR-HECKOR','NL-Amsterdam','JP-Yoyogi','KR-Jungnang']:
         plotwatch=False
 
@@ -2488,7 +2472,7 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
             ax2.set_xlabel(None)
             ax2.set_ylabel('cumulative rainfall (mm)')
 
-            fig2.savefig(f'{sitepath}/precip_plots/{sitename}_{flux}_{sample}_cumulative.png',bbox_inches='tight',dpi=150)
+            fig2.savefig(f'{sitepath}/precip_plots/{sitename}_{flux}_{sample}_cumulative.{img_fmt}',bbox_inches='tight',dpi=150)
             plt.close('all')
 
         if sample in ['in-sample']: # do not create plots
@@ -2534,7 +2518,7 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
         ax.set_xlabel(None)
 
         # plt.show()
-        fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_timeseries.png',bbox_inches='tight',dpi=150)
+        fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_timeseries.{img_fmt}',bbox_inches='tight',dpi=150)
 
         ########################################
 
@@ -2574,9 +2558,9 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
 
         # plt.show()
         if (publication) and (flux=='Tair'):
-            fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_diurnal_fig4b.png',bbox_inches='tight',dpi=150)
+            fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_diurnal_fig4b.{img_fmt}',bbox_inches='tight',dpi=150)
         else:
-            fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_diurnal.png',bbox_inches='tight',dpi=150)
+            fig.savefig(f'/{sitepath}/era_correction/{sitename}_{flux}_{sample}_diurnal.{img_fmt}',bbox_inches='tight',dpi=150)
 
 
         plt.close('all')
@@ -2585,21 +2569,59 @@ def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,site
 
 def set_global_attributes(ds,siteattrs,ds_type):
 
-    if ds_type == 'forcing':
-        title = f"URBAN-PLUMBER forcing data for {siteattrs['sitename']}"
-        summary = f"Observed and ERA5-derived surface meteorological data for {siteattrs['long_sitename']}. Data is for use by registered participants of Urban-PLUMBER in this project only. Do not distribute. All times in UTC."
-    if ds_type == 'analysis':
-        title = f"URBAN-PLUMBER analysis data for {siteattrs['sitename']}"
-        summary = f"Observed timeseries for {siteattrs['long_sitename']}. Used for analysis of land surface models participating in Urban-PLUMBER. All times in UTC. Do not distribute."
-    if ds_type == 'raw_obs':
-        title = f"Observations (raw) for {siteattrs['sitename']}"
-        summary = f"Observations for {siteattrs['long_sitename']}, as provided for the Urban-PLUMBER model evaluation project. Do not distribute."
-    if ds_type == 'clean_obs':
-        title = f"Observations (cleaned) for {siteattrs['sitename']}"
-        summary = f"Quality controlled observations for {siteattrs['long_sitename']}. Used for the Urban-PLUMBER model evaluation project. Do not distribute."
+    sitename = siteattrs['sitename']
+    long_sitename = siteattrs['long_sitename']
 
-    time_analysis_start = ds.time_analysis_start
-    timestep_number_analysis = ds.timestep_number_analysis
+    if ds_type == 'raw_obs':
+        title = f'Flux tower observations from {sitename} (before qc)'
+        summary = f'Flux tower observations for {long_sitename}, before quality control. Provided for use in the Urban-PLUMBER model evaluation project.'
+    
+    elif ds_type == 'clean_obs':
+        title = f'Flux tower observations from {sitename} (after qc)'
+        summary = f'Quality controlled flux tower observations for {long_sitename}. Developed for use in the Urban-PLUMBER model evaluation project.'
+
+    elif ds_type == 'forcing':
+        title = f'Continuous meterological forcing from {sitename}'
+        summary = f'Flux tower observations from {long_sitename} after quality control, with gap filling from bias corrected ERA5 surface meteorological data. Developed for use in the Urban-PLUMBER model evaluation project.'
+
+    elif ds_type == 'analysis':
+        title = f'Flux tower observations from {sitename} (after qc, for model analysis)'
+        summary = f'Flux tower observations for {long_sitename}. Used for analysis of land surface models on modelevaluation.org. Do not distribute.'
+
+    elif ds_type == 'era5_raw':
+        title = f'Continuous ERA5 meterological data for the grid nearest {sitename}'
+        summary = f'ERA5 reanalysis data (single level) for the grid nearest {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+
+    elif ds_type == 'era5_corrected':
+        title = f'Continuous bias corrected ERA5 data for {sitename} (Urban-PLUMBER methods)'
+        summary = f'ERA5 reanalysis data (single level), bias corrected for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+
+    elif ds_type == 'era5_linear':
+        title = f'Continous bias corrected ERA5 data for {sitename} (linear regression)'
+        summary = f'ERA5 reanalysis data (single level), bias corrected using linear regression for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+
+    else:
+        print('WARNING: timeseries ds_type not recognised')
+        title = ''
+        summary = ''
+
+    # licence information
+    unrestricted = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
+                    'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','NL-Amsterdam','UK-KingsCollege',
+                    'UK-Swindon','US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
+
+    if sitename in unrestricted:
+        license = 'CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/'
+    else:
+        license = 'Restricted dataset - contact data owner - do not distribute'
+
+    # use existing attributes for analysis start date if present
+    try:
+        time_analysis_start = ds.time_analysis_start
+        timestep_number_analysis = ds.timestep_number_analysis
+    except Exception:
+        time_analysis_start = pd.to_datetime(ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
+        timestep_number_analysis = str(len(ds.time))
 
     ds.attrs = OrderedDict([])
 
@@ -2609,8 +2631,10 @@ def set_global_attributes(ds,siteattrs,ds_type):
     ds.attrs['sitename']                  = siteattrs['sitename']
     ds.attrs['long_sitename']             = siteattrs['long_sitename']
     ds.attrs['version']                   = siteattrs['out_suffix']
-    ds.attrs['conventions']               = 'ALMA+CF.rev13'
+    ds.attrs['keywords']                  = 'urban, flux tower, eddy covariance, observations'
+    ds.attrs['conventions']               = 'ALMA, CF, ACDD-1.3'
     ds.attrs['featureType']               = 'timeSeries'
+    ds.attrs['license']                   = license
     ds.attrs['time_coverage_start']       = pd.to_datetime(ds.time[0].values).strftime('%Y-%m-%d %H:%M:%S')
     ds.attrs['time_coverage_end']         = pd.to_datetime(ds.time[-1].values).strftime('%Y-%m-%d %H:%M:%S')
     if ds_type in ['forcing','analysis']:
@@ -2621,16 +2645,18 @@ def set_global_attributes(ds,siteattrs,ds_type):
     if ds_type in ['forcing','analysis']:
         ds.attrs['timestep_number_spinup']= str(len(ds.time) - int(timestep_number_analysis))
     ds.attrs['timestep_number_analysis']  = str(timestep_number_analysis)
+    ds.attrs['project']                   = 'Urban-PLUMBER: "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
+    ds.attrs['project_contact']           = 'Mathew Lipson (m.lipson@unsw.edu.au), Sue Grimmond (c.s.grimmond@reading.ac.uk), Martin Best (martin.best@metoffice.gov.uk)'
     ds.attrs['observations_contact']      = siteattrs['obs_contact']
     ds.attrs['observations_reference']    = siteattrs['obs_reference']
-    ds.attrs['project_contact']           = 'Mathew Lipson: m.lipson@unsw.edu.au, Sue Grimmond: c.s.grimmond@reading.ac.uk, Martin Best: martin.best@metoffice.gov.uk'
     ds.attrs['date_created']              = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    if ds_type in ['forcing','analysis']:
+    ds.attrs['source']                    = 'https://github.com/matlipson/urban-plumber_pipeline'
+    if ds_type in ['forcing','analysis','era5_raw','era5_corrected','era5_linear']:
         ds.attrs['other_references']      = 'ERA5: Copernicus Climate Change Service (C3S) (2017): https://cds.climate.copernicus.eu/cdsapp#!/home NCI Australia: http://doi.org/10.25914/5f48874388857'
-        ds.attrs['acknowledgements']      = 'Contains modified Copernicus Climate Change Service Information (ERA5 hourly data on single levels). Data from replica hosted by NCI Australia. With thanks to all involved in collecting, processing and hosting observational data'
-    ds.attrs['comment']                   = siteattrs['obs_comment']
-    if ds_type in ['forcing']:
-        ds.attrs['history']               = siteattrs['history']
+        ds.attrs['acknowledgements']      = 'Contains modified Copernicus Climate Change Service Information 2021 (ERA5 hourly data on single levels). Data from replica hosted by NCI Australia.'
+    if ds_type in ['forcing','analysis','raw_obs','clean_obs']:
+        ds.attrs['comment']               = siteattrs['obs_comment']
+    ds.attrs['history']                   = siteattrs['history']
 
     return ds
 
@@ -2653,7 +2679,7 @@ def write_netcdf_file(ds,fpath_out):
 
     return
 
-def write_netcdf_to_text_file(ds,fpath_out,ds_type):
+def write_netcdf_to_text_file(ds,fpath_out):
     ''' Writes text file from xarray dataset
 
     ds (dataset): dataset to write to file
@@ -2717,11 +2743,9 @@ def write_netcdf_to_text_file(ds,fpath_out,ds_type):
 
     df.index.name = None
 
+    print(f'writing out text file')
     print(df.head())
-
-    print(f'writing out {ds_type}')
     with open(fpath_out, 'w') as file:
-        # file.writelines(df_rounded.to_string(header=True,index=True))
         file.writelines(df.to_string(formatters=formats,header=True,index=True))
 
     print('add header comments and metainfo')
@@ -2729,38 +2753,14 @@ def write_netcdf_to_text_file(ds,fpath_out,ds_type):
         origdata = f1.read()
         with open(fpath_out, 'w') as f2: # re-write with header info
 
-            f2.write(f'# title = {ds.title}\n')
-            f2.write(f'# summary = {ds.summary}\n')
-            f2.write(f'# sitename = {ds.sitename}\n')
-            f2.write(f'# long_sitename = {ds.long_sitename}\n')
-            f2.write(f'# version = {ds.version}\n')
-            f2.write(f'# time_coverage_start = {ds.time_coverage_start}\n')
-            f2.write(f'# time_coverage_end = {ds.time_coverage_end}\n')
-            if ds_type=='forcing':
-                f2.write(f'# time_analysis_start = {ds.time_analysis_start}\n')
-            f2.write(f'# time_shown_in = UTC\n')
-            f2.write(f'# local_utc_offset_hours = {ds.local_utc_offset_hours}\n')
-            f2.write(f'# timestep_interval_seconds = {ds.timestep_interval_seconds}\n')
-            if ds_type=='forcing':
-                f2.write(f'# timestep_number_spinup = {ds.timestep_number_spinup}\n')
-            f2.write(f'# timestep_number_analysis = {ds.timestep_number_analysis}\n')
-            f2.write(f'# observations_contact = {ds.observations_contact}\n')
-            f2.write(f'# observations_reference = {ds.observations_reference}\n')
-            f2.write(f'# project_contact = {ds.project_contact}\n')
-            f2.write(f'# date_created = {ds.date_created}\n')
-            f2.write(f'# conventions = {ds.conventions}\n')
-            f2.write(f'# featureType = {ds.featureType}\n')
-            if ds_type=='forcing':
-                f2.write(f'# other_references = {ds.other_references}\n')
-                f2.write(f'# acknowledgements = {ds.acknowledgements}\n')
-            f2.write(f'# comment = {ds.comment}\n')
+            for key,item in ds.attrs.items():
+                f2.write(f'# {key} = {item}\n')
+
             f2.write(f'# see sitedata csv for site characteristics\n')
             f2.write(f'# units = {", ".join([f"{key}: {values}" for key,values in var_units.items()])}\n')
-            f2.write(f'# quality control (qc) flags: {ds.Tair_qc.flag_meanings}\n')
+            f2.write(f'# quality control (qc) flags: 0:observed, 1:gapfilled_from_obs, 2:gapfilled_derived_from_era5, 3:missing\n') 
             f2.write(f'# \n')
             f2.write(f'#     Date     Time {origdata[20:]}')
-
-    print('done writing forcing\n')
 
     return
 
@@ -3324,8 +3324,6 @@ def build_new_dataset_forcing(data):
                     ),
                 },
             )
-
-    ds = set_variable_attributes(ds)
     
     return ds
 
@@ -3867,6 +3865,16 @@ def set_variable_attributes(ds):
         ds[key].attrs['subgrid']       = 'soil'
         ds[key].encoding['_FillValue'] =  missing_float
 
+        try:
+            if ds.sitename in ['SG-TelokKurau','US-WestPhoenix']:
+                ds[key].attrs['depth'] = '0.02 m' 
+            if ds.sitename in ['US-Minneapolis1','US-Minneapolis2','CA-Sunset']:
+                ds[key].attrs['depth'] = '0.05 m'
+            if ds.sitename in ['US-Baltimore']:
+                ds[key].attrs['depth'] = '0.10 m'
+        except Exception:
+            pass
+
     ###########################################################################
     ########################## Evaporation components #########################
 
@@ -3976,7 +3984,7 @@ def set_variable_attributes(ds):
         if key[-2:] == 'qc':
             ds[key].attrs['long_name']     = 'Quality control (qc) flag for %s' %key[:-3]
             ds[key].attrs['flag_values']   = '0, 1, 2, 3'
-            ds[key].attrs['flag_meanings'] = '0:observed, 1:gapfilled_from_obs, 2:gapfilled_derived_from_era5, 3:missing'
+            ds[key].attrs['flag_meanings'] = '0: observed, 1: gapfilled_from_obs, 2: gapfilled_derived_from_era5, 3:missing'
             ds[key].encoding['_FillValue'] =  missing_int8
             ds[key].encoding['dtype']      = 'int8'
             ds[key].values                 = ds[key].values.astype('int8')
@@ -4253,7 +4261,7 @@ def create_markdown_observations(ds,siteattrs):
     site_region= f'./images/{ds.sitename}_region_map.jpg'
     site_sat   = f'./images/{ds.sitename}_site_sat.jpg'
     site_map   = f'./images/{ds.sitename}_site_map.jpg'
-    all_obs_qc = './obs_plots/all_obs_qc.png'
+    all_obs_qc = f'./obs_plots/all_obs_qc.{img_fmt}'
     photo_source = siteattrs['photo_source']
 
     print('writing site markdown file to index.md')
@@ -4297,7 +4305,7 @@ def create_markdown_observations(ds,siteattrs):
 
 ''')
         for flux in ['SWdown','LWdown','Tair','Qair','PSurf','Rainf','Snowf','Wind_N','Wind_E']:
-            fname = f'./obs_plots/{flux}_gapfilled_forcing.png'
+            fname = f'./obs_plots/{flux}_gapfilled_forcing.{img_fmt}'
             f.write(f'### {flux} forcing\n')
             f.write('\n')
             f.write(f'[![{flux}]({fname})]({fname})\n')
@@ -4322,7 +4330,7 @@ def create_markdown_observations(ds,siteattrs):
  
 ''')
 
-        filepaths = sorted(glob.glob(f'{sitepath}/obs_plots/*_qc_diurnal.png'))
+        filepaths = sorted(glob.glob(f'{sitepath}/obs_plots/*_qc_diurnal.{img_fmt}'))
         filenames = [os.path.basename(path) for path in filepaths]
 
         f.write('\n')
@@ -4364,7 +4372,7 @@ The UP methods are as follows:
 Mean absolute error (MAE) is shown in the legend.
 ''')
         for flux in ['Tair','Qair','PSurf','LWdown','SWdown','Wind','Rainf']:
-            fname = f'./era_correction/{sitename}_{flux}_all_diurnal.png'
+            fname = f'./era_correction/{sitename}_{flux}_all_diurnal.{img_fmt}'
 
             f.write(f'### {flux} diurnal bias correction\n')
             f.write('\n')
