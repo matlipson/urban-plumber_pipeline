@@ -105,7 +105,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         clean_ds.attrs['timestep_number_analysis'] = raw_ds.attrs['timestep_number_analysis']
         clean_ds = set_global_attributes(clean_ds,siteattrs,ds_type='clean_obs')
         clean_ds = set_variable_attributes(clean_ds)
-        clean_ds = clean_ds.merge(assign_sitedata(siteattrs))
+        # clean_ds = clean_ds.merge(assign_sitedata(siteattrs))
 
         print(f'writing cleaned observations to NetCDF\n')
         fpath = f'{sitepath}/timeseries/{sitename}_clean_observations_{siteattrs["out_suffix"]}.nc'
