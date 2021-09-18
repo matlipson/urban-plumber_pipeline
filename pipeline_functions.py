@@ -173,7 +173,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
     if correct_era5:
         print('making corrections to ERA5 data based on local site information')
         corr_ds = calc_era5_corrections(era_ds,watch_ds,sitename,sitedata,sitepath,plot_bias='all',obs_ds=clean_ds)
-        corr_ds = set_global_attributes(era_ds,siteattrs,ds_type='era5_corrected')
+        corr_ds = set_global_attributes(corr_ds,siteattrs,ds_type='era5_corrected')
         corr_ds = set_variable_attributes(corr_ds)
         # write
         fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.nc'
@@ -2264,7 +2264,7 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
     fluxes2 = ['SWdown','LWdown','Tair','Qair','PSurf','Rainf','Wind']
     
     if resample_obs_to_era:
-        print('resampling clean')
+        print('resampling')
         clean = clean_ds[fluxes1].to_dataframe().resample('60Min',closed='right',label='right').mean()
         sdate, edate = clean.index[0], clean.index[-1]
         # compare daytime SWdown only
@@ -2272,19 +2272,10 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
         # create wind speed from components for comparison with WATCH
         clean['Wind'] = np.sqrt(clean['Wind_N']**2 + clean['Wind_E']**2)
         # match continuous datasets to observation periods
-        print('resampling corr')
         corr = corr_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
-        print('resampling era')
         era = era_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
-        print('resampling watch')
         watch = watch_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe().where(clean.notna())
-        print('resampling lin')
-        print('1\n',lin_ds)
-        print('2\n',fluxes2)
-        print('3\n',lin_ds[fluxes2].sel(time=slice(sdate,edate)))
-        print('4\n',lin_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe())
         tmp = lin_ds[fluxes2].sel(time=slice(sdate,edate)).to_dataframe()
-        print('final')
         lin = tmp.where(clean.notna())
         print('done resampling')
 
@@ -2382,8 +2373,6 @@ def compare_corrected_errors_escandon(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,si
     return
 
 def plot_corr_comparison(clean,corr,era,watch,lin,shift,flux,units,sitename,sitepath,sample,metric,plotwatch=True,publication=False):
-
-    print(f'plotting {flux} comparison for {sample} {metric}')
 
     if sitename in ['GR-HECKOR','NL-Amsterdam','JP-Yoyogi','KR-Jungnang']:
         plotwatch=False
