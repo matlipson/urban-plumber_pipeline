@@ -9,7 +9,7 @@ You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-
 '''
 
 __title__ = "Converts netcdf to text"
-__version__ = "2021-09-08"
+__version__ = "2021-09-20"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'converts any netcdf (nc) file found in the sitename/timeseries folder to text'

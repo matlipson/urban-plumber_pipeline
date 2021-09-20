@@ -18,7 +18,7 @@ limitations under the License.
 '''
 
 __title__ = "Pipeline functions for processing site information in the Urban-PLUMBER project"
-__version__ = "2021-09-08"
+__version__ = "2021-09-20"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'When run on NCI:Gadi this script collects ERA5 and WFDE5 surface data and applies correction based on observations. Output intended for driving land surface models'
@@ -348,7 +348,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
 
         print('writing era5 corrected to text file')
         fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.txt'
-        write_netcdf_to_text_file(ds=era_ds,fpath_out=fpath)
+        write_netcdf_to_text_file(ds=corr_ds,fpath_out=fpath)
 
         print('writing met forcing to text file')
         fpath = f'{sitepath}/timeseries/{sitename}_metforcing_{siteattrs["out_suffix"]}.txt'
@@ -2563,15 +2563,15 @@ def set_global_attributes(ds,siteattrs,ds_type):
 
     if ds_type == 'raw_obs':
         title = f'Flux tower observations from {sitename} (before qc)'
-        summary = f'Flux tower observations for {long_sitename}, before quality control. Provided for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'Flux tower observations for {long_sitename}, before quality control. Provided for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
     
     elif ds_type == 'clean_obs':
         title = f'Flux tower observations from {sitename} (after qc)'
-        summary = f'Quality controlled flux tower observations for {long_sitename}. Developed for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'Quality controlled flux tower observations for {long_sitename}. Developed for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
 
     elif ds_type == 'forcing':
         title = f'Continuous meterological forcing from {sitename}'
-        summary = f'Flux tower observations from {long_sitename} after quality control, with gap filling from bias corrected ERA5 surface meteorological data. Developed for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'Flux tower observations from {long_sitename} after quality control, with gap filling from bias corrected ERA5 surface meteorological data. Developed for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
 
     elif ds_type == 'analysis':
         title = f'Flux tower observations from {sitename} (after qc, for model analysis)'
@@ -2579,15 +2579,15 @@ def set_global_attributes(ds,siteattrs,ds_type):
 
     elif ds_type == 'era5_raw':
         title = f'Continuous ERA5 meterological data for the grid nearest {sitename}'
-        summary = f'ERA5 reanalysis data (single level) for the grid nearest {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'ERA5 reanalysis data (single level) for the grid nearest {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
 
     elif ds_type == 'era5_corrected':
         title = f'Continuous bias corrected ERA5 data for {sitename} (Urban-PLUMBER methods)'
-        summary = f'ERA5 reanalysis data (single level), bias corrected for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'ERA5 reanalysis data (single level), bias corrected for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
 
     elif ds_type == 'era5_linear':
         title = f'Continous bias corrected ERA5 data for {sitename} (linear regression)'
-        summary = f'ERA5 reanalysis data (single level), bias corrected using linear regression for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project.'
+        summary = f'ERA5 reanalysis data (single level), bias corrected using linear regression for {long_sitename} (1990-2020). Developed for use in the Urban-PLUMBER model evaluation project. Attribute any use to "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
 
     else:
         print('WARNING: timeseries ds_type not recognised')

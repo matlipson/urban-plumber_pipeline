@@ -9,7 +9,7 @@ You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-
 '''
 
 __title__ = "Quality control observations"
-__version__ = "2021-09-08"
+__version__ = "2021-09-20"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 

@@ -7,10 +7,10 @@ Hrisko, J. (2020). Geographic Visualizations in Python with Cartopy. Maker Porta
 https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy
 '''
 
-__title__   = 'Plot OpenStreetMap site and regional maps'
+__title__   = "Plot OpenStreetMap site and regional maps"
 __version__ = "2021-09-08"
-__author__  = 'Mathew Lipson'
-__email__   = 'm.lipson@unsw.edu.au'
+__author__  = "Mathew Lipson"
+__email__   = "m.lipson@unsw.edu.au"
 
 import os
 import numpy as np
@@ -94,7 +94,6 @@ def osm_image(sitename,sitepath,sitedata,style='satellite',radius=500,npoints=50
     # NOTE: scale specifications should be selected based on radius:
     scale = int(120/np.log(radius))
     scale = (scale<20) and scale or 19
-    scale = 16
     # or change extent manually
     # -- 2     = coarse image, select for worldwide or continental scales
     # -- 4-6   = medium coarseness, select for countries and larger states

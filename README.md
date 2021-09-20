@@ -9,7 +9,7 @@ gap filled dataset for each of the 20 sites at 30 and 60 minute resolutions (dep
 
 This is the code base. Input data (i.e. from observing groups, ERA5, WFDE5 and other global datasets) is held seperately.
 
-Timeseries plots are available at https://urban-plumber.github.io/sites ([archive](https://doi.org/10.5281/zenodo.5507036)).
+Timeseries plots are available at https://urban-plumber.github.io/sites ([archive](https://doi.org/10.5281/zenodo.5516693)).
 
 Code for associated manuscript figures are available at https://doi.org/10.5281/zenodo.5508694
 
@@ -20,15 +20,17 @@ Timeseries output data are not yet publicly available.
  - `run_all.py`: wrapper to run pipeline at all sites
  - `pipeline_functions.py`: main pipeline and shared functions
  - `qc_observations`: quality control processing
- - `convert_nc_to_text.py`: for converting previously created netcdf output to text format (for convenience)
  - `plot_sitemaps.py`: for plotting regional and local map images
+ - `convert_nc_to_text.py`: for converting previously created netcdf output to text format (for convenience)
  - in `sites/SITENAME/`:
     - `create_dataset_SITENAME`: site specific wrapper for setting site information, importing site observations and calling pipeline functions to process and create output.
     - `SITENAME_sitedata_vX.csv`: site specific numerical metadata, e.g. latitude, longitude, surface cover fractions, morphology, population density etc. Includes sources.
+ - `up_env.yaml`: the conda environment in which processing took place
+ - `archive.py`: script for packaging archives
 
 ## Usage
 
-Code is written in Python 3.8 with dependencies including numpy, pandas, xarray, statsmodels, matplotlib, ephem and cartopy.
+Code is written in Python 3.8 with dependencies including numpy, pandas, xarray, statsmodels, matplotlib, ephem and cartopy. See the file `up_env.yaml` for the full conda environment used.
 
 The folder input_data is required for processing (not included in this repository).
 
@@ -39,7 +41,7 @@ The folder input_data is required for processing (not included in this repositor
  - edit the sitelist as required
  - type `python run_all.py`
 
-#### For all processing one site
+#### For all processing a single site
 
  - use `/sites/SITENAME/create_dataset_SITENAME.py`
  - edit variables `projpath` to point to this repository, and `datapath` to point to input data (or use arguments at the command line, see below)
@@ -48,11 +50,11 @@ The folder input_data is required for processing (not included in this repositor
 
 Optional arguments for running `create_dataset_SITENAME.py` are:
 
- - `-- log`:        logs print statements in processing to file
- - `-- projpath XXX`:   changes the root project folder
- - `-- datapath XXX`:   changes the folder containing raw site data
- - `-- global`:     provides site characteristics from global datasets (large files)
- - `-- existing`:   loads previously processed nc files (if running after processing)
+ - `-- log`:          logs print statements in processing to file
+ - `-- global`:       provides site characteristics from global datasets (large files)
+ - `-- existing`:     loads previously processed nc files (if running after processing)
+ - `-- projpath XXX`: changes the root project folder
+ - `-- datapath XXX`: changes the folder containing raw site data
 
 ## Outputs
 
@@ -60,17 +62,18 @@ When run the following outputs are produced for each of the 20 sites within the 
 
 - `index.md`: markdown file for displaying key site metadata and output plots in a single webpage
 
- - `timeseries/`:
-    - `SITENAME_raw_observations_vX.nc`: site observed timeseries before project-wide quality control.
-    - `SITENAME_clean_observations_vX.nc`: site observed timeseries after project-wide quality control. Includes site characteristic metadata.
-    - `SITENAME_metforcing_vX.nc`: site observed timeseries after project-wide quality control and gap filling.
-    - `SITENAME_era5_corrected_vX.nc`: site ERA5 surface data (1990-2020) with bias corrections as applied in the final dataset.
-    - `SITENAME_era5_linear_vX.nc`: site ERA5 surface data (1990-2020) with bias corrections using a linear regression on observations.
+ - `timeseries/`: following timeseries are produced as netCDF4 (nc) and as plain text (txt)
+    - `SITENAME_raw_observations_vX`: site observed timeseries before project-wide quality control.
+    - `SITENAME_clean_observations_vX`: site observed timeseries after project-wide quality control. Includes site characteristic metadata.
+    - `SITENAME_metforcing_vX`: site observed timeseries after project-wide quality control and gap filling.
+    - `SITENAME_era5_corrected_vX`: site ERA5 surface data (1990-2020) with bias corrections as applied in the final dataset.
+    - `SITENAME_era5_linear_vX`: site ERA5 surface data (1990-2020) with bias corrections using a linear regression on observations.
     - `SITENAME_ghcnd_precip.csv`: continuous daily precipitation timeseries using the nearest available GHCND station observations.
 
  - `obs_plots/`:
     - `all_obs_qc.png`: a summary plot of all included observations as provided (i.e. with nearby tower gap filling but before project gap filling, with project quality controlled periods flagged)
-    - `VARIBALE_gapfilled_forcing.png`: timeseries after gap filling and prepending with corrected ERA5 data
+    - `VARIABLE_gapfilled_forcing.png`: timeseries after gap filling and prepending with corrected ERA5 data
+    - `VARIABLE_obs_qc_diurnal.png`: diurnal plot of all observations, with periods flagged by qc marked in red
 
  - `era_correction/`:
     - mean hourly diurnal and timeseries images for each corrected variable comparing bias correction methods. 'all' includes all observed data (after qc) for for training and testing. 'out-of-sample' uses an 80/20 approach to train/test data.
@@ -82,7 +85,7 @@ When run the following outputs are produced for each of the 20 sites within the 
     - a series of plots comparing cumulative precipitation timeseries. The 'snow_correction' plot shows precipitation after including snowfall from ERA5 and after partitioning to maintain mass balance (see `partition_precip_to_snowf_rainf` subroutine in `pipeline_functions.py`).
  - `images/`:
     - various maps at regional and local scales. `SITENAME_site_photo.jpg` provided seperately by observing groups.
- - `log_processing_AU-Preston_v0.9.txt`: a log of the print statements through running the create_dataset_SITENAME scripts.
+ - `log_processing_AU-Preston_vX.txt`: a log of the print statements through running the create_dataset_SITENAME scripts.
 
 
 ## Authors
