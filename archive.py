@@ -9,7 +9,7 @@ You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-
 '''
 
 __title__ = "Ancillary functions for archiving and copying processed files"
-__version__ = "2021-09-20"
+__version__ = "2022-05-29"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 
@@ -25,27 +25,40 @@ projpath = f'{oshome}/git/urban-plumber_pipeline'            # root of repositor
 
 sitelist = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
             'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','MX-Escandon','NL-Amsterdam',
-            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau','UK-KingsCollege','UK-Swindon',
+            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau06','UK-KingsCollege','UK-Swindon',
             'US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
 
-restricted = ['PL-Lipowa','PL-Narutowicza','MX-Escandon','SG-TelokKurau']
-open_sites = list(set(sitelist) - set(restricted))
+restricted = ['SG-TelokKurau'] # as used in model evaluation
+open_sites = sorted(list(set(sitelist) - set(restricted)))
 
-output_v = 'v0.9'
-sitedata_v = 'v1'
+input_version = 'v0.9'
+archive_version = 'v0.92'
+sitedata_version = 'v1'
 
+###################
+# v0.9 original submission
+# v0.92 update with SG-TelokKurau06
 ###################
 
 def main():
 
     archive()
+    # web_archive()
+    # archive_light()
+
+    # copy_to_website()
 
     return
 
 def archive():
 
-    archpath = f'{oshome}/up_archive_{output_v}'
+    archpath = f'{oshome}/up_archive_{archive_version}'
 
+    if not os.path.exists(archpath):
+        print(f'making {archpath} dir')
+        os.mkdir(archpath)
+
+    os.chdir(archpath)
 
     for sitename in sitelist:
 
@@ -57,36 +70,80 @@ def archive():
                 print(f'making {sitename}/{dirname} dir')
                 os.makedirs(f'{archpath}/{sitename}/{dirname}')
 
-        print(f'copying {sitename} files archive {output_v}')
+        print(f'copying {sitename} files archive {input_version}')
 
-        os.system(f'cp {sitepath}/log_processing_{sitename}_{output_v}.txt {archpath}/{sitename}/log_processing_{sitename}_{output_v}.txt')
-        os.system(f'cp {sitepath}/{sitename}_sitedata_{sitedata_v}.csv {archpath}/{sitename}/{sitename}_sitedata_{sitedata_v}.csv')
+        os.system(f'cp {sitepath}/log_processing_{sitename}_{input_version}.txt {archpath}/{sitename}/log_processing_{sitename}_{input_version}.txt')
+        os.system(f'cp {sitepath}/{sitename}_sitedata_{sitedata_version}.csv {archpath}/{sitename}/{sitename}_sitedata_{sitedata_version}.csv')
 
         os.system(f'cp {sitepath}/index.html {archpath}/{sitename}/index.html')
         os.system(f'cp {sitepath}/index_files/* {archpath}/{sitename}/index_files/')
 
         for timeseries in ['clean_observations','era5_corrected','metforcing','raw_observations']:
-            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{output_v}.nc {archpath}/{sitename}/timeseries/')
-            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{output_v}.txt {archpath}/{sitename}/timeseries/')
+            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{input_version}.nc {archpath}/{sitename}/timeseries/')
+            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{input_version}.txt {archpath}/{sitename}/timeseries/')
 
     ########################################################################
 
-    licence = 'These files are restricted. You must have written authorisation from data providers to access. Do not distribute.'
+    # RESTRICTED NO LONGER REQUIRED, ALL ARE OPEN
+
+    # licence = 'These files are restricted. You must have written authorisation from data providers to access. Do not distribute.'
+    # create_readme(archpath,licence)
+
+    # print('creating zip archives')
+    # for sitename in restricted:
+    #     os.system(f'zip -r -X Urban-PLUMBER_Sites_{sitename}.zip {sitename} README.md')
+
+    # os.system(f'zip -r -X Urban-PLUMBER_Sites_FullCollection.zip { f" ".join(sitelist)} README.md')
+
+    ########################################################################
+
+    licence = 'Data are licenced under CC-BY-4.0. https://creativecommons.org/licenses/by/4.0/'
     create_readme(archpath,licence)
 
-    os.chdir(archpath)
-    print('creating zip archives')
-    for sitename in restricted:
-        os.system(f'zip -r -X Urban-PLUMBER_Sites_{sitename}.zip {sitename} README.md')
+    os.system(f'zip -r -X Urban-PLUMBER_Sitedata_OpenCollection_{archive_version}.zip { f" ".join(open_sites)} README.md')
 
-    os.system(f'zip -r -X Urban-PLUMBER_Sites_FullCollection.zip { f" ".join(sitelist)} README.md')
+    print('deleting unzipped folders')
+    for sitename in sitelist:
+        os.system(f'rm -r {archpath}/{sitename}')
+    os.system(f'rm {archpath}/README.md')
+
+    return
+
+
+def archive_light():
+
+    archpath = f'{oshome}/UP_KUOM_{input_version}'
+
+    os.chdir(archpath)
+
+    for sitename in sitelist:
+
+        sitepath = f'{projpath}/sites/{sitename}'
+
+        # make directories if necessary
+        for dirname in ['timeseries','index_files']:
+            if not os.path.exists(f'{archpath}/{sitename}/{dirname}'):
+                print(f'making {sitename}/{dirname} dir')
+                os.makedirs(f'{archpath}/{sitename}/{dirname}')
+
+        print(f'copying {sitename} files archive {input_version}')
+
+        os.system(f'cp {sitepath}/log_processing_{sitename}_{input_version}.txt {archpath}/{sitename}/log_processing_{sitename}_{input_version}.txt')
+        os.system(f'cp {sitepath}/{sitename}_sitedata_{sitedata_version}.csv {archpath}/{sitename}/{sitename}_sitedata_{sitedata_version}.csv')
+
+        os.system(f'cp {sitepath}/index.html {archpath}/{sitename}/index.html')
+        os.system(f'cp {sitepath}/index_files/* {archpath}/{sitename}/index_files/')
+
+        for timeseries in ['clean_observations','era5_corrected','metforcing','raw_observations']:
+            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{input_version}.nc {archpath}/{sitename}/timeseries/')
+            os.system(f'cp {sitepath}/timeseries/{sitename}_{timeseries}_{input_version}.txt {archpath}/{sitename}/timeseries/')
 
     ########################################################################
 
     licence = 'These files licenced under CC-BY-4.0. https://creativecommons.org/licenses/by/4.0/'
     create_readme(archpath,licence)
 
-    os.system(f'zip -r -X Urban-PLUMBER_Sites_OpenCollection.zip { f" ".join(open_sites)} README.md')
+    os.system(f'zip -r -X Urban-PLUMBER_Sites_KUOM.zip { f" ".join(open_sites)} README.md')
 
     print('deleting unzipped folders')
     for sitename in sitelist:
@@ -163,8 +220,9 @@ def copy_from_website_light():
     return
 
 def web_archive():
+    '''for archiving index.html site pages (created from index.md)'''
 
-    archpath = f'{oshome}/up_web_archive_{output_v}'
+    archpath = f'{oshome}/up_web_archive_{input_version}'
 
     for sitename in sitelist:
 
@@ -176,7 +234,7 @@ def web_archive():
                 print(f'making {sitename}/{dirname} dir')
                 os.makedirs(f'{archpath}/{sitename}/{dirname}')
 
-        print(f'copying {sitename} files archive {output_v}')
+        print(f'copying {sitename} files archive {input_version}')
 
         os.system(f'cp {sitepath}/index.html {archpath}/{sitename}/index.html')
         os.system(f'cp {sitepath}/index_files/* {archpath}/{sitename}/index_files/')
@@ -191,7 +249,7 @@ def copy_to_website():
 
         sitepath = f'{projpath}/sites/{sitename}'
 
-        for dirname in ['obs_plots','era_correction']:
+        for dirname in ['obs_plots','era_correction','images']:
             # make directories if necessary
             if not os.path.exists(f'{webpath}/{sitename}/{dirname}'):
                 print(f'making {dirname} dir')
@@ -203,9 +261,9 @@ def copy_to_website():
         for flux in ['Tair','Qair','PSurf','LWdown','SWdown','Wind','Rainf']:
             os.system(f'cp {sitepath}/era_correction/{sitename}_{flux}_all_diurnal.png {webpath}/{sitename}/era_correction/')
 
-        print(f'copying image files from website')
+        print(f'copying image files to website')
         for image in ['region_map.jpg','site_map.jpg','site_photo.jpg','site_sat.jpg']:
-            os.system(f'cp {webpath}/{sitename}/images/{sitename}_{image} {sitepath}/images/{sitename}_{image}')
+            os.system(f'cp {sitepath}/images/{sitename}_{image} {webpath}/{sitename}/images/{sitename}_{image} ')
 
     return
 

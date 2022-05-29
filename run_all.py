@@ -26,7 +26,7 @@ datapath = f'{oshome}/git/urban-plumber_pipeline/input_data' # raw data path (si
 
 sitelist = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
             'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','MX-Escandon','NL-Amsterdam',
-            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau','UK-KingsCollege','UK-Swindon',
+            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau06','UK-KingsCollege','UK-Swindon',
             'US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
 
 # sitelist = ['AU-Preston'] # for testing

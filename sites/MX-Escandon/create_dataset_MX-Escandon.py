@@ -2,14 +2,14 @@
 Urban-PLUMBER processing code
 Associated with the manuscript: Harmonized, gap-filled dataset from 20 urban flux tower sites
 
-Copyright (c) 2021 Mathew Lipson
+Copyright (c) 2022 Mathew Lipson
 
 Licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2021-09-20"
+__version__ = "2022-05-29"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -92,7 +92,7 @@ obs_contact = 'Eric Velasco: evelasco@mce2.org, he_velasco2003@yahoo.com'
 obs_reference = 'Velasco, Pressley, Allwine, Grivicke, Molina and Lamb (2011): https://doi.org/10.1007/s00704-010-0314-7; Velasco, Perrusquia, Jiménez, Hernández, Camacho, Rodríguez, Retama, Molina (2014): https://doi.org/10.1016/j.atmosenv.2014.08.018'
 obs_comment = 'No LW radiation available during this period, ERA5 is used with bias-correction from 2006 data at same site. Wind direction taken from nearby site. Potential unidentified mismatch between local DST and standard times.'
 photo_source='E. Velasco'
-history = 'v0.9 (2021-09-08): beta issue'
+history = 'v0.9 (2021-09-08): beta issue, v0.2 (2022-05-29): remove'
 
 ##########################################################################
 # MAIN
@@ -222,7 +222,8 @@ def import_obs(sitedata,siteattrs):
                         wind_dir_from=raw['ud MER (deg) *'], # NOTE wdir taken from nearby site
                         )[0],
             SWup   = raw['Kup (W/m2)'],
-            LWup   = raw['Lup (W/m2)*'],
+            # LWup   = raw['Lup (W/m2)*'],
+            LWup   = np.nan, # provided data was synthetic (from linear model), so excluded in v0.92
             Qle    = raw['HL (W/m2)'],
             Qh     = raw['H (W/m2)'],
             ###########################

@@ -495,7 +495,7 @@ def get_era5_data(sitename,sitedata,syear,eyear,era5path,sitepath):
     # ncvars = ['msdwswrf','msnswrf','msdwlwrf','msnlwrf','2t','2d','sp',vz,uz,'mtpr','msr','msshf','mslhf']
     ncvars = ['msdwswrf','msdwlwrf','2t','2d','sp',vz,uz,'mtpr','msr']
 
-    if sitename == 'SG-TelokKurau': # nearest era tile over water, move to land
+    if sitename in ['SG-TelokKurau','SG-TelokKurau06']: # nearest era tile over water, move to land
         sitedata['latitude'] = sitedata['latitude'] + 0.25
         sitedata['longitude'] = sitedata['longitude'] - 0.25
 
@@ -827,6 +827,20 @@ def convert_qair_to_rh(qair,temp,pressure):
     assert rh.max()>1., 'relative humidity values betwen 0-1 (should be 0-100)'
 
     return rh
+
+def convert_vapour_pressure_to_qair(e,temp,pressure):
+    ''' using equations from Weedon 2010 & code from Cucchi 2020 '''
+
+    # calculate saturation vapor pressure
+    esat = calc_esat(temp,pressure)
+    # calculate saturation specific humidity
+    qsat = calc_qsat(esat,pressure)
+    # calculate specific humidity
+
+    rh = e/esat*100
+    qair = qsat*rh/100.
+
+    return qair
 
 def convert_uv_to_wdir(u,v):
     ''' Converts 2 component wind velocity to wind direction scalar
@@ -2258,6 +2272,19 @@ def test_out_of_sample(clean_ds,era_ds,watch_ds,sitedata,siteattrs,outfrac=0.2):
 
 def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,sitepath,sample='in-sample'):
 
+    '''
+    To evaluate the methods available for gap filling, quality-controlled tower site observations are used to assess the calculated value using three metrics: 
+    a) Mean bias error (MBE)
+    b) Mean absolute error (MAE)
+    c) Normalised standard deviation (nSD): 
+    The time stamps for each variable are made consistent between the data sources: 
+     - ERA5 are hourly time ending data
+     - 60-min site observations are hour ending
+     - 30-min site observations are converted to 60-min time ending through averaging
+     - WFDE5 SWdown, LWdown and Rainf are natively 60-min time beginning they are shifted forward to match the time ending timestamps
+     - WFDE5 Tair, Qair, Psurf and Wind are instantaneous samples on the hour so their time stamp remains unchanged.
+    '''
+
     resample_obs_to_era=True
 
     fluxes1 = ['SWdown','LWdown','Tair','Qair','PSurf','Rainf','Wind_N','Wind_E']
@@ -2290,12 +2317,6 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
         lin = lin_ds[fluxes2].to_dataframe().resample('%sS' %ts).interpolate()[sdate:edate].where(clean.notna())
 
     for metric in ['mae','mbe','nsd','r']:
-
-        # # special case for Escandon using 2006 LW observations
-        # if (sitename=='MX-Escandon') and (sample in ['in-sample','out-of-sample']):
-        #     df = pd.read_csv(f'{sitepath}/processing/{metric}_{sample}.csv',index_col=0)
-        # else:
-        #     df = pd.DataFrame()
 
         df = pd.DataFrame()
 
@@ -2594,15 +2615,14 @@ def set_global_attributes(ds,siteattrs,ds_type):
         title = ''
         summary = ''
 
-    # licence information
-    unrestricted = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
-                    'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','NL-Amsterdam','UK-KingsCollege',
-                    'UK-Swindon','US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
 
-    if sitename in unrestricted:
-        license = 'CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/'
-    else:
+    # licence information
+    restricted = ['SG-TelokKurau'] # Restricted Singapore dataset used for model evaluation, alternative 06 period licenced openly
+
+    if sitename in restricted:
         license = 'Restricted dataset - contact data owner - do not distribute'
+    else:
+        license = 'CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/'
 
     # use existing attributes for analysis start date if present
     try:

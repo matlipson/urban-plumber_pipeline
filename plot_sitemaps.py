@@ -247,7 +247,7 @@ def plot_grid_site(sitename,sitepath,sitedata, style='map'):
     ax.text(lon,lat-pad, sitename, color='black', 
         fontsize=14, ha='center',va='top', path_effects=stroke, transform=data_crs)
 
-    if sitename == 'SG-TelokKurau':
+    if sitename in ['SG-TelokKurau','SG-TelokKurau06']:
         era_lat_box2, era_lon_box2 = define_grid_box(lat+0.25,lon-0.25,era_lats,era_lons,0.25)
         ax.plot(era_lon_box2,era_lat_box2,color='red', ls='dashed',transform=data_crs)
         ax.text(era_lon_box2[0]+pad,era_lat_box2[1]-pad, 'ERA5 alternate', color='red', 
@@ -377,7 +377,7 @@ if __name__ == "__main__":
 
     sitelist = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
                 'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','MX-Escandon','NL-Amsterdam',
-                'PL-Lipowa','PL-Narutowicza','SG-TelokKurau','UK-KingsCollege','UK-Swindon',
+                'PL-Lipowa','PL-Narutowicza','SG-TelokKurau06','UK-KingsCollege','UK-Swindon',
                 'US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
 
     main(sitelist)
