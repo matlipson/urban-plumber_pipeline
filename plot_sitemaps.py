@@ -104,7 +104,7 @@ def osm_image(sitename,sitepath,sitedata,style='satellite',radius=500,npoints=50
     extent = calc_extent(lon,lat,radius*1.1)
     ax.set_extent(extent) # set extents
 
-    ax.add_image(img, int(scale)) # add OSM with zoom specification
+    # ax.add_image(img, int(scale)) # add OSM with zoom specification
 
     # add site
     ax.plot(lon,lat, color='black', marker='x', ms=7, mew=3, transform=data_crs)
@@ -124,17 +124,17 @@ def osm_image(sitename,sitepath,sitedata,style='satellite',radius=500,npoints=50
         rand_lat = cgeo.Geodesic().direct((lon,lat),rand_azimuths_deg,rand_distances).base[:,1]
 
         ax.plot(rand_lon,rand_lat,color='black',lw=0,marker='x',ms=4.5,mew=1.0,transform=data_crs)
-        ax.plot(rand_lon,rand_lat,color='yellow',lw=0,marker='x',ms=4,mew=0.5, transform=data_crs)
+        ax.plot(rand_lon,rand_lat,color='gold',lw=0,marker='x',ms=4,mew=0.5, transform=data_crs)
 
     # add cartopy geodesic circle
     circle_points = cgeo.Geodesic().circle(lon=lon, lat=lat, radius=radius)
     geom = shapely.geometry.Polygon(circle_points)
     ax.add_geometries((geom,), crs=ccrs.PlateCarree(), edgecolor='red', facecolor='none', linewidth=2.5)
 
-    radius_text = cgeo.Geodesic().direct(points=(lon,lat),azimuths=35,distances=radius).base[:,0:2][0]
+    radius_text = cgeo.Geodesic().direct(points=(lon,lat),azimuths=40,distances=radius).base[:,0:2][0]
     stroke = [pe.Stroke(linewidth=2.5, foreground='w'), pe.Normal()]
-    ax.text(radius_text[0]+0.0002,radius_text[1],f'r={radius} m', color='red', 
-        fontsize=8, ha='left',va='bottom', path_effects=stroke, transform=data_crs)
+    ax.text(radius_text[0]+0.0002,radius_text[1],f'r={radius} m', color='k', 
+        fontsize=12, ha='left',va='bottom', path_effects=stroke, transform=data_crs)
 
     # nc.plot(ax=ax,alpha=0.75,transform=data_crs)
 
@@ -142,16 +142,19 @@ def osm_image(sitename,sitepath,sitedata,style='satellite',radius=500,npoints=50
                         color='k',lw=0.5)
 
     gl.top_labels = False
-    gl.right_labels = False
+    gl.left_labels = False
+    gl.right_labels = True
     gl.xformatter = cartopy.mpl.gridliner.LONGITUDE_FORMATTER
     gl.yformatter = cartopy.mpl.gridliner.LATITUDE_FORMATTER
+    gl.xlabel_style = {'size': 12}
+    gl.ylabel_style = {'size': 12}
 
     # copyright notice
-    ax.text(0.99,0.01,copyright, color='k', fontsize=6, ha='right', path_effects=stroke, transform=ax.transAxes)
+    # ax.text(0.99,0.01,copyright, color='k', fontsize=6, ha='right', path_effects=stroke, transform=ax.transAxes)
 
     # plt.show()
 
-    fig.savefig(f'{sitepath}/images/{sitename}_site_{style[:3]}.jpg', dpi=150, bbox_inches='tight')
+    fig.savefig(f'{sitepath}/images/{sitename}_site_{style[:3]}_blank.png', dpi=200, bbox_inches='tight')
 
     return
 
@@ -256,9 +259,9 @@ def plot_grid_site(sitename,sitepath,sitedata, style='map'):
     # plot distance bar
     start = (extent[0]+0.05,extent[2]+0.05)
     end = cgeo.Geodesic().direct(points=start,azimuths=90,distances=10000).base[:,0:2][0]
-    ax.plot([start[0],end[0]],[start[1],end[1]], color='k', linewidth=1, mew=1, transform=data_crs)
+    ax.plot([start[0],end[0]],[start[1],end[1]], color='k', linewidth=1.5, mew=1, transform=data_crs)
     ax.text(start[0]+0.005,start[1]+0.005, '10 km', color='black', 
-        fontsize=10, ha='left',va='bottom', path_effects=stroke, transform=data_crs)
+        fontsize=12, ha='left',va='bottom', path_effects=stroke, transform=data_crs)
 
     # gridlines
     xticks = np.arange(round(lon)-8,round(lon)+8,0.25)
@@ -279,8 +282,7 @@ def plot_grid_site(sitename,sitepath,sitedata, style='map'):
 
     # plt.show()
 
-    fig.savefig(f'{sitepath}/images/{sitename}_region_map.jpg', dpi=150, bbox_inches='tight')
-
+    fig.savefig(f'{sitepath}/images/{sitename}_region_map.png', dpi=200, bbox_inches='tight')
 
     return
 

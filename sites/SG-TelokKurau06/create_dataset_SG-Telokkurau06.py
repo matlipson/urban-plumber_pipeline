@@ -2,14 +2,14 @@
 Urban-PLUMBER processing code
 Associated with the manuscript: Harmonized, gap-filled dataset from 20 urban flux tower sites
 
-Copyright (c) 2021 Mathew Lipson
+Copyright (c) 2022 Mathew Lipson
 
 Licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2022-05-23"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -82,7 +82,7 @@ if args.existing:
 ##########################################################################
 
 sitename = 'SG-TelokKurau06'
-out_suffix = 'v0.9'
+out_suffix = 'v1'
 sitedata_suffix = 'v1'
 
 
@@ -92,7 +92,7 @@ obs_contact = 'Matthias Roth (geomr@nus.edu.sg)'
 obs_reference = 'Roth, Jansson and Velasco (2017) https://doi.org/10.1002/joc.4873; Flux tower website: https://www.nusurbanclimate.com/tkfluxtowersingapore' 
 obs_comment = 'ERA5 data for gap-filling is from adjacent grid over land.'
 photo_source='M. Roth'
-history = 'v0.92 (2022-05-29): beta issue'
+history = 'v0.92 (2022-05-29): beta issue; v1 (2022-09-15): with publication in ESSD'
 
 ##########################################################################
 # MAIN

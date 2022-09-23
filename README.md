@@ -13,7 +13,9 @@ Timeseries plots are available at https://urban-plumber.github.io/sites ([archiv
 
 Code for associated manuscript figures are available at https://doi.org/10.5281/zenodo.5508694
 
-Timeseries output data are not yet publicly available.
+Processed output data are available at: https://doi.org/10.5281/zenodo.5517550
+
+All times are in UTC with period ending timestamps. To convert a netcdf to local time use `convert_UTC_to_local_time.py`. To convert a netcdf to a text file use `convert_nc_to_text.py`.
 
 ## Included files
 
@@ -22,6 +24,7 @@ Timeseries output data are not yet publicly available.
  - `qc_observations`: quality control processing
  - `plot_sitemaps.py`: for plotting regional and local map images
  - `convert_nc_to_text.py`: for converting previously created netcdf output to text format (for convenience)
+ - `convert_UTC_to_local_time.py`: takes a netcdf file (all in UTC) and converts to local time using the UTC offset parameter included in netcdf metadata
  - in `sites/SITENAME/`:
     - `create_dataset_SITENAME`: site specific wrapper for setting site information, importing site observations and calling pipeline functions to process and create output.
     - `SITENAME_sitedata_vX.csv`: site specific numerical metadata, e.g. latitude, longitude, surface cover fractions, morphology, population density etc. Includes sources.
@@ -86,7 +89,6 @@ When run the following outputs are produced for each of the 20 sites within the 
  - `images/`:
     - various maps at regional and local scales. `SITENAME_site_photo.jpg` provided seperately by observing groups.
  - `log_processing_AU-Preston_vX.txt`: a log of the print statements through running the create_dataset_SITENAME scripts.
-
 
 ## Authors
 

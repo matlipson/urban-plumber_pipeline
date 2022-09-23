@@ -18,7 +18,7 @@ limitations under the License.
 '''
 
 __title__ = "Pipeline functions for processing site information in the Urban-PLUMBER project"
-__version__ = "2021-09-20"
+__version__ = "2022-09-16"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'When run on NCI:Gadi this script collects ERA5 and WFDE5 surface data and applies correction based on observations. Output intended for driving land surface models'
@@ -44,10 +44,8 @@ wfdepath = '/g/data/rt52/era5-derived/wfde5/v1-1/cru'
 # USER INPUTS
 ##########################################################################
 
-missing_float = -9999.
-missing_int8  = -128
 wind_hgt      = 10.     # era5 wind height variable (100m has poor diurnal pattern, use 10m)
-img_fmt       = 'png'   # image format
+img_fmt       = 'png'   # image saving format
 
 ##########################################################################
 # main
@@ -90,7 +88,7 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
     sitename = siteattrs['sitename']
     sitepath = siteattrs['sitepath']
     
-    raw_ds = xr.open_dataset(f'{sitepath}/timeseries/{sitename}_raw_observations_{siteattrs["out_suffix"]}.nc')
+    # raw_ds = xr.open_dataset(f'{sitepath}/timeseries/{sitename}_raw_observations_{siteattrs["out_suffix"]}.nc')
 
     ##############################################################
     ######## CLEAN SITE OBSERVATIONS ########
@@ -346,9 +344,9 @@ def main(datapath,sitedata,siteattrs,raw_ds,fullpipeline=True,qcplotdetail=False
         fpath = f'{sitepath}/timeseries/{sitename}_clean_observations_{siteattrs["out_suffix"]}.txt'
         write_netcdf_to_text_file(ds=clean_ds,fpath_out=fpath)
 
-        print('writing era5 corrected to text file')
-        fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.txt'
-        write_netcdf_to_text_file(ds=corr_ds,fpath_out=fpath)
+        # print('writing era5 corrected to text file')
+        # fpath = f'{sitepath}/timeseries/{sitename}_era5_corrected_{siteattrs["out_suffix"]}.txt'
+        # write_netcdf_to_text_file(ds=corr_ds,fpath_out=fpath)
 
         print('writing met forcing to text file')
         fpath = f'{sitepath}/timeseries/{sitename}_metforcing_{siteattrs["out_suffix"]}.txt'
@@ -1548,7 +1546,7 @@ def calc_era5_linear_corrections(era_ds,watch_ds,obs_ds,siteattrs,sitedata):
     sitename = siteattrs['sitename']
     sitepath = siteattrs['sitepath']
 
-    lin_ds = era_ds.copy()
+    lin_ds = era_ds[['SWdown','LWdown','Tair','Qair','PSurf','Rainf','Snowf','Wind_N','Wind_E','Wind']]
 
     min_obs = 10
 
@@ -2356,6 +2354,7 @@ def compare_corrected_errors(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,si
     return
 
 def compare_corrected_errors_escandon(clean_ds,era_ds,watch_ds,corr_ds,lin_ds,sitename,sitepath,sample='in-sample'):
+    '''special case for MX-Escandon which uses the 2006 period for bias correcting LWdown'''
 
     resample_obs_to_era=True
     
@@ -2654,7 +2653,8 @@ def set_global_attributes(ds,siteattrs,ds_type):
     if ds_type in ['forcing','analysis']:
         ds.attrs['timestep_number_spinup']= str(len(ds.time) - int(timestep_number_analysis))
     ds.attrs['timestep_number_analysis']  = str(timestep_number_analysis)
-    ds.attrs['project']                   = 'Urban-PLUMBER: "Harmonized, gap-filled dataset from 20 urban flux tower sites"'
+    ds.attrs['project']                   = 'Urban-PLUMBER multi-site model evaluation project for urban areas'
+    ds.attrs['references']                = 'Data from "Harmonized gap-filled dataset from 20 urban flux tower sites": https://doi.org/10.5281/zenodo.5517550'
     ds.attrs['project_contact']           = 'Mathew Lipson (m.lipson@unsw.edu.au), Sue Grimmond (c.s.grimmond@reading.ac.uk), Martin Best (martin.best@metoffice.gov.uk)'
     ds.attrs['observations_contact']      = siteattrs['obs_contact']
     ds.attrs['observations_reference']    = siteattrs['obs_reference']
@@ -2675,8 +2675,26 @@ def write_netcdf_file(ds,fpath_out):
     ds (dataset): dataset to write to file
     fpath_out (str): file path for writing'''
 
-    encoding = {var: {'zlib':True} for var in ds.data_vars}
-    ds.to_netcdf(fpath_out, format='NETCDF4', mode='w', encoding=encoding) # do not use unlimited dimensions (increases file size x10)
+    for key in ds.keys():
+        ds[key].encoding.update({'zlib':True})
+        if '_qc' in key:
+            ds[key].encoding = {'zlib':True,'dtype':'int8'}
+        elif key in ['tvl','tvh']:
+            ds[key].encoding = {'zlib':True,'dtype':'int8'}
+        elif key in ['cvl','cvh','slt','lsm','fsr','z']:
+            ds[key].encoding = {'zlib':True,'dtype':'float32','_FillValue':-999}
+        else:
+            ds[key].encoding = {'zlib':True,'dtype':'float32','_FillValue':-999}
+    for key in ds.coords:
+        if key in ['latitude','longitude']:
+            ds[key].encoding.update({'zlib':True, '_FillValue':-999,'dtype':'float32'})
+        elif key in ['time']:
+            ds[key].encoding.update({'zlib':True, 'dtype':'int32'})
+        else:
+            ds[key].encoding.update({'zlib':True})
+
+    print(f'writing {fpath_out}')
+    ds.to_netcdf(fpath_out, format='NETCDF4', mode='w')
 
     # manually add seconds if time units fall on midnight
     if ds.time.encoding['units'][-8:] == '00:00:00':
@@ -3481,6 +3499,31 @@ def convert_local_to_utc(df,offset_from_utc):
 
     return df
 
+def convert_utc_to_local(ds):
+    '''converts an xarray dataset to local time'''
+
+    if ds.time_shown_in == 'UTC':
+
+        print('converting to local time')
+
+        utc_times = ds.time.values
+        offset = ds.local_utc_offset_hours
+
+        tzhrs = int(offset)
+        tzmin = int((offset - int(offset))*60)
+        local_times = ds.time.values + pd.Timedelta(hours=tzhrs) + pd.Timedelta(minutes=tzmin)
+
+        ds = ds.assign_coords(time=local_times)
+
+        ds.attrs['time_coverage_start'] = str(pd.to_datetime(ds.time_coverage_start) + pd.Timedelta(hours=ds.local_utc_offset_hours))
+        ds.attrs['time_coverage_end'] = str(pd.to_datetime(ds.time_coverage_end) + pd.Timedelta(hours=ds.local_utc_offset_hours))
+        ds.attrs['time_shown_in'] = 'local standard'
+
+    else:
+        print('Time does not appear to be in UTC (see ds.time_shown_in')
+
+    return ds
+
 def calc_midday_albedo(clean_ds,offset_from_utc):
 
     obs = clean_ds.squeeze().to_dataframe()
@@ -3514,8 +3557,8 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'time'
         ds[key].encoding['units']      = 'seconds since %s' %seconds_since_str
         ds[key].encoding['calendar']   = 'standard'
-        ds[key].encoding['dtype']      = 'i8'
-        ds[key].encoding['_FillValue'] =  missing_int8
+        ds[key].encoding['dtype']      = 'int32'
+        ds[key].encoding['_FillValue'] =  -999
 
     ##########################################################################
     ################### critical energy balance components ###################
@@ -3524,70 +3567,60 @@ def set_variable_attributes(ds):
         ds[key].attrs['long_name']     = 'Longitude'
         ds[key].attrs['standard_name'] = 'longitude'
         ds[key].attrs['units']         = 'degrees_east'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'latitude'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Latitude'
         ds[key].attrs['standard_name'] = 'latitude'
         ds[key].attrs['units']         = 'degrees_north'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SWnet'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Net shortwave radiation (positive downward)'
         ds[key].attrs['standard_name'] = 'surface_net_downward_shortwave_flux'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'LWnet'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Net longwave radiation (positive downward)'
         ds[key].attrs['standard_name'] = 'surface_net_downward_longwave_flux'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qle'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Latent heat flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upward_latent_heat_flux'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qh'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Sensible heat flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upward_sensible_heat_flux'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qanth'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Anthropogenic heat flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upward_heat_flux_due_to_anthropogenic_energy_consumption'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qstor'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Net storage heat flux in all materials (increase)'
         ds[key].attrs['standard_name'] = 'surface_thermal_storage_heat_flux'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SWup'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Upwelling shortwave radiation flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upwelling_shortwave_flux_in_air'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'LWup'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Upwelling longwave radiation flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upwelling_longwave_flux_in_air'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ###########################################################################
     ################### additional energy balance compoenents #################
@@ -3597,28 +3630,24 @@ def set_variable_attributes(ds):
         ds[key].attrs['long_name']     = 'Ground heat flux (positive downward)'
         ds[key].attrs['standard_name'] = 'downward_heat_flux_at_ground_level_in_soil'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qanth_Qh'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Anthropogenic sensible heat flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upward_sensible_heat_flux_due_to_anthropogenic_energy_consumption'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qanth_Qle'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Anthropogenic latent heat flux (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_upward_latent_heat_flux_due_to_anthropogenic_energy_consumption'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qtau'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Momentum flux (positive downward)'
         ds[key].attrs['standard_name'] = 'magnitude_of_surface_downward_stress'
         ds[key].attrs['units']         = 'N/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ############################################################################
     ##################### general water balance components #####################
@@ -3628,77 +3657,66 @@ def set_variable_attributes(ds):
         ds[key].attrs['long_name']     = 'Snowfall rate (positive downward)'
         ds[key].attrs['standard_name'] = 'snowfall_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Rainf'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Rainfall rate (positive downward)'
         ds[key].attrs['standard_name'] = 'rainfall_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Evap'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Total evapotranspiration (positive upward)'
         ds[key].attrs['standard_name'] = 'surface_evapotranspiration'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qs'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Surface runoff (positive out of gridcell)'
         ds[key].attrs['standard_name'] = 'surface_runoff_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qsb'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Subsurface runoff (positive out of gridcell)'
         ds[key].attrs['standard_name'] = 'subsurface_runoff_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qsm'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Subsurface runoff (positive out of gridcell)'
         ds[key].attrs['standard_name'] = 'subsurface_runoff_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qfz'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Re-freezing of water in the snow (liquid to solid)'
         ds[key].attrs['standard_name'] = 'surface_snow_and_ice_refreezing_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'DelSoilMoist'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Change in soil moisture (increase)'
         ds[key].attrs['standard_name'] = 'change_over_time_in_mass_content_of_water_in_soil'
         ds[key].attrs['units']         = 'kg/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'DelSWE'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Change in snow water equivalent (increase)'
         ds[key].attrs['standard_name'] = 'change_over_time_in_surface_snow_and_ice_amount'
         ds[key].attrs['units']         = 'kg/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'DelIntercept'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Change in interception storage (increase)'
         ds[key].attrs['standard_name'] = 'change_over_time_in_canopy_water_amount'
         ds[key].attrs['units']         = 'kg/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qirrig'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Anthropogenic water flux from irrigation (increase)'
         ds[key].attrs['standard_name'] = 'surface_downward_mass_flux_of_water_due_to_irrigation'
         ds[key].attrs['units']         = 'kg/m2/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ##########################################################################
     ########################## surface state variables ########################
@@ -3709,7 +3727,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_snow_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'snow'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'VegT'
     if key in ds.keys():
@@ -3717,7 +3734,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_canopy_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'vegetation'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'BaresoilT'
     if key in ds.keys():
@@ -3725,49 +3741,42 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_ground_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'baresoil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'AvgSurfT'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Average surface temperature (skin)'
         ds[key].attrs['standard_name'] = 'surface_temperature'
         ds[key].attrs['units']         = 'K'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'RadT'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Surface radiative temperature'
         ds[key].attrs['standard_name'] = 'surface_radiative_temperature'
         ds[key].attrs['units']         = 'K'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Albedo'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Surface albedo'
         ds[key].attrs['standard_name'] = 'surface_albedo'
         ds[key].attrs['units']         = '1'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SWE'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Snow water equivalent'
         ds[key].attrs['standard_name'] = 'surface_albedo'
         ds[key].attrs['units']         = 'kg/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SurfStor'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Surface water storage'
         ds[key].attrs['standard_name'] = 'surface_water_amount_assuming_no_snow'
         ds[key].attrs['units']         = 'kg/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SnowFrac'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Snow covered fraction'
         ds[key].attrs['standard_name'] = 'surface_snow_area_fraction'
         ds[key].attrs['units']         = '1'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SAlbedo'
     if key in ds.keys():
@@ -3775,7 +3784,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'snow_and_ice_albedo'
         ds[key].attrs['units']         = '1'
         ds[key].attrs['subgrid']       = 'snow'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'CAlbedo'
     if key in ds.keys():
@@ -3783,7 +3791,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'canopy_albedo'
         ds[key].attrs['units']         = '1'
         ds[key].attrs['subgrid']       = 'vegetation'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'UAlbedo'
     if key in ds.keys():
@@ -3791,7 +3798,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'urban_albedo'
         ds[key].attrs['units']         = '1'
         ds[key].attrs['subgrid']       = 'urban'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'LAI'
     if key in ds.keys():
@@ -3799,7 +3805,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'leaf_area_index'
         ds[key].attrs['units']         = '1'
         ds[key].attrs['subgrid']       = 'vegetation'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'RoofSurfT'
     if key in ds.keys():
@@ -3807,7 +3812,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_roof_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'roof'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'WallSurfT'
     if key in ds.keys():
@@ -3815,7 +3819,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_wall_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'roof'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'RoadSurfT'
     if key in ds.keys():
@@ -3823,21 +3826,18 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'surface_wall_skin_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'road'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'TairSurf'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Near surface air temperature (2m)'
         ds[key].attrs['standard_name'] = 'air_temperature_near_surface'
         ds[key].attrs['units']         = 'K'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Tair2m'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Near surface air temperature (2m)'
         ds[key].attrs['standard_name'] = 'air_temperature_near_surface'
         ds[key].attrs['units']         = 'K'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'TairCanyon'
     if key in ds.keys():
@@ -3845,7 +3845,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'air_temperature_in_street_canyon'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'canyon'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'TairBuilding'
     if key in ds.keys():
@@ -3853,7 +3852,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'air_temperature_in_buildings'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'building'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ###########################################################################
     ######################## Sub-surface state variables ######################
@@ -3864,7 +3862,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'moisture_content_of_soil_layer'
         ds[key].attrs['units']         = 'kg/m2'
         ds[key].attrs['subgrid']       = 'soil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SoilTemp'
     if key in ds.keys():
@@ -3872,7 +3869,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'soil_temperature'
         ds[key].attrs['units']         = 'K'
         ds[key].attrs['subgrid']       = 'soil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
         try:
             if ds.sitename in ['SG-TelokKurau','US-WestPhoenix']:
@@ -3893,7 +3889,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'transpiration_flux'
         ds[key].attrs['units']         = 'kg/m2/s'
         ds[key].attrs['subgrid']       = 'vegetation'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'ESoil'
     if key in ds.keys():
@@ -3901,7 +3896,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'liquid_water_evaporation_flux_from_soil'
         ds[key].attrs['units']         = 'kg/m2/s'
         ds[key].attrs['subgrid']       = 'baresoil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'RootMoist'
     if key in ds.keys():
@@ -3909,7 +3903,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'mass_content_of_water_in_soil_defined_by_root_depth'
         ds[key].attrs['units']         = 'kg/m2'
         ds[key].attrs['subgrid']       = 'soil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'SoilWet'
     if key in ds.keys():
@@ -3917,7 +3910,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'relative_soil_moisture_content_above_wilting_point'
         ds[key].attrs['units']         = '1'
         ds[key].attrs['subgrid']       = 'soil'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'ACond'
     if key in ds.keys():
@@ -3925,7 +3917,6 @@ def set_variable_attributes(ds):
         ds[key].attrs['standard_name'] = 'inverse_aerodynamic_resistance'
         ds[key].attrs['units']         = 'm/s'
         ds[key].attrs['subgrid']       = 'vegetation'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ###########################################################################
     ########################## forcing data variables #########################
@@ -3935,56 +3926,48 @@ def set_variable_attributes(ds):
         ds[key].attrs['long_name']     = 'Downward shortwave radiation at measurement height'
         ds[key].attrs['standard_name'] = 'surface_downwelling_shortwave_flux_in_air'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'LWdown'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Downward longwave radiation at measurement height'
         ds[key].attrs['standard_name'] = 'surface_downwelling_longwave_flux_in_air'
         ds[key].attrs['units']         = 'W/m2'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Tair'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Air temperature at measurement height'
         ds[key].attrs['standard_name'] = 'air_temperature'
         ds[key].attrs['units']         = 'K'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Qair'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Specific humidity at measurement height'
         ds[key].attrs['standard_name'] = 'surface_specific_humidity'
         ds[key].attrs['units']         = 'kg/kg'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'PSurf'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Air pressure at measurement height'
         ds[key].attrs['standard_name'] = 'surface_air_pressure'
         ds[key].attrs['units']         = 'Pa'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Wind'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Wind speed at measurement height'
         ds[key].attrs['standard_name'] = 'wind_speed'
         ds[key].attrs['units']         = 'm/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Wind_N'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Northward wind component at measurement height'
         ds[key].attrs['standard_name'] = 'northward_wind'
         ds[key].attrs['units']         = 'm/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     key = 'Wind_E'
     if key in ds.keys():
         ds[key].attrs['long_name']     = 'Eastward wind component at measurement height'
         ds[key].attrs['standard_name'] = 'eastward_wind'
         ds[key].attrs['units']         = 'm/s'
-        ds[key].encoding['_FillValue'] =  missing_float
 
     ######################################################################
     ########################## qc flag variables #########################
@@ -3994,8 +3977,6 @@ def set_variable_attributes(ds):
             ds[key].attrs['long_name']     = 'Quality control (qc) flag for %s' %key[:-3]
             ds[key].attrs['flag_values']   = '0, 1, 2, 3'
             ds[key].attrs['flag_meanings'] = '0: observed, 1: gapfilled_from_obs, 2: gapfilled_derived_from_era5, 3:missing'
-            ds[key].encoding['_FillValue'] =  missing_int8
-            ds[key].encoding['dtype']      = 'int8'
             ds[key].values                 = ds[key].values.astype('int8')
             ds['%s' %key[:-3]].attrs['ancillary_variables'] = key
 

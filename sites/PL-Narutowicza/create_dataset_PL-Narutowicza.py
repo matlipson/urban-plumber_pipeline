@@ -2,14 +2,14 @@
 Urban-PLUMBER processing code
 Associated with the manuscript: Harmonized, gap-filled dataset from 20 urban flux tower sites
 
-Copyright (c) 2021 Mathew Lipson
+Copyright (c) 2022 Mathew Lipson
 
 Licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2021-09-20"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -83,7 +83,7 @@ if args.existing:
 ##########################################################################
 
 sitename = 'PL-Narutowicza'
-out_suffix = 'v0.9'
+out_suffix = 'v1'
 sitedata_suffix = 'v1'
 
 local_utc_offset_hours = 1
@@ -92,7 +92,7 @@ obs_contact = 'Wlodzimierz Pawlak: wlodzimierz.pawlak@geo.uni.lodz.pl, Krzysztof
 obs_reference = 'Fortuniak, Pawlak and Siedlecki (2013): https://doi.org/10.1007/s10546-012-9762-1; Fortuniak, Kłysik, Siedlecki (2006): http://www.urban-climate.org/documents/ICUC6_Preprints.pdf (p64-67)'
 obs_comment = 'Missing forcing filled with PL-Lipowa tower site where available. Precipitation from IMGW Łódź Lublinek.'
 photo_source='Włodzimierz Pawlak'
-history = 'v0.9 (2021-09-08): beta issue'
+history = 'v0.9 (2021-09-08): beta issue; v1 (2022-09-15): with publication in ESSD'
 
 ##########################################################################
 # MAIN

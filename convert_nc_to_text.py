@@ -8,47 +8,46 @@ This software is licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
-__title__ = "Converts netcdf to text"
-__version__ = "2021-09-20"
+__title__ = "Converts a netcdf file to text"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
-__description__ = 'converts any netcdf (nc) file found in the sitename/timeseries folder to text'
-
+__description__ = 'converts any netcdf (nc) file from the Urban-PLUMBER collection to text'
 
 import os
-import sys
 import xarray as xr
-import glob
-
-# data path (local or server)
-oshome=os.getenv('HOME')
-
-projpath = '.'
 
 ###################
+
 
 sitelist = ['AU-Preston','AU-SurreyHills','CA-Sunset','FI-Kumpula','FI-Torni','FR-Capitole',
             'GR-HECKOR','JP-Yoyogi','KR-Jungnang','KR-Ochang','MX-Escandon','NL-Amsterdam',
-            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau','UK-KingsCollege','UK-Swindon',
+            'PL-Lipowa','PL-Narutowicza','SG-TelokKurau06','UK-KingsCollege','UK-Swindon',
             'US-Baltimore','US-Minneapolis1','US-Minneapolis2','US-WestPhoenix']
+
+# example filepath
+projpath = '.'
+sitename = 'AU-Preston'
+fpath = f'{projpath}/sites/{sitename}/timeseries/{sitename}_clean_observations_v1.nc'
+converted_fpath = f'{projpath}/converted/{sitename}_clean_observations_v1.txt'
+
+# ensure output directory exists
+outpath = os.path.dirname(converted_fpath)
+if not os.path.exists(outpath):
+    print(f'creating {outpath}')
+    os.makedirs(outpath)
 
 ###################
 
-def main():
+def main(fpath):
+    
+    print(f'converting {fpath}')
 
-    for sitename in sitelist:
+    ds = xr.open_dataset(fpath)
 
-        fpaths = glob.glob(f'{projpath}/sites/{sitename}/timeseries/*.nc')
+    write_netcdf_to_text_file(ds=ds,fpath_out=converted_fpath)
 
-        for fpath in fpaths:
-            print(f'converting {fpath}')
-
-            ds = xr.open_dataset(fpath)
-            txt_fpath = fpath[:-2]+'txt'
-
-            write_netcdf_to_text_file(ds=ds,fpath_out=txt_fpath)
-
-            print(f'done! see {txt_fpath}')
+    print(f'done! see {txt_fpath}')
 
     return
 
@@ -140,4 +139,4 @@ def write_netcdf_to_text_file(ds,fpath_out):
     return
 
 if __name__ == "__main__":
-    main()
+    main(fpath)

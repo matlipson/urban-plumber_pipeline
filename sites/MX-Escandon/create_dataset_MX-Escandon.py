@@ -9,7 +9,7 @@ You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2022-05-29"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -83,7 +83,7 @@ if args.existing:
 ##########################################################################
 
 sitename = 'MX-Escandon'
-out_suffix = 'v0.9'
+out_suffix = 'v1'
 sitedata_suffix = 'v1'
 
 local_utc_offset_hours = -6.0
@@ -92,7 +92,7 @@ obs_contact = 'Eric Velasco: evelasco@mce2.org, he_velasco2003@yahoo.com'
 obs_reference = 'Velasco, Pressley, Allwine, Grivicke, Molina and Lamb (2011): https://doi.org/10.1007/s00704-010-0314-7; Velasco, Perrusquia, Jiménez, Hernández, Camacho, Rodríguez, Retama, Molina (2014): https://doi.org/10.1016/j.atmosenv.2014.08.018'
 obs_comment = 'No LW radiation available during this period, ERA5 is used with bias-correction from 2006 data at same site. Wind direction taken from nearby site. Potential unidentified mismatch between local DST and standard times.'
 photo_source='E. Velasco'
-history = 'v0.9 (2021-09-08): beta issue, v0.2 (2022-05-29): remove'
+history = 'v0.9 (2021-09-08): beta issue, v0.92 (2022-05-29): remove LWup from obs (empirical); v1 (2022-09-15): with publication in ESSD'
 
 ##########################################################################
 # MAIN
@@ -171,11 +171,14 @@ def main():
     
     if create_outofsample_obs:
 
-        # clear out values in 2006 except LWdown and test out-of-sample
-        LWdown2006 = raw2006.copy()
-        LWdown2006 = LWdown2006.where(False)
-        LWdown2006['LWdown'].values = raw2006['LWdown'].values
-        _,_ = pipeline_functions.test_out_of_sample(LWdown2006,era_ds,watch_ds,sitedata,siteattrs)
+        pipeline_functions.compare_corrected_errors_escandon(raw2006,era_ds,watch_ds,corr_ds,lin_ds,sitename,sitepath,'out-of-sample')
+
+        # # clear out values in 2006 except LWdown and test out-of-sample
+        # LWdown2006 = raw2006.copy()
+        # LWdown2006 = LWdown2006.where(False)
+        # LWdown2006['LWdown'].values = raw2006['LWdown'].values
+
+        # _,_ = pipeline_functions.test_out_of_sample(LWdown2006,era_ds,watch_ds,sitedata,siteattrs)
 
     print(f'{sitename} done!')
 

@@ -2,14 +2,14 @@
 Urban-PLUMBER processing code
 Associated with the manuscript: Harmonized, gap-filled dataset from 20 urban flux tower sites
 
-Copyright (c) 2021 Mathew Lipson
+Copyright (c) 2022 Mathew Lipson
 
 Licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2021-09-20"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -82,7 +82,7 @@ if args.existing:
 ##########################################################################
 
 sitename = 'AU-Preston'
-out_suffix = 'v0.9'
+out_suffix = 'v1'
 sitedata_suffix = 'v1'
 
 local_utc_offset_hours = 10.0
@@ -91,7 +91,7 @@ obs_contact = 'Andrew Coutts: andrew.coutts@monash.edu; Nigel Tapper: nigel.tapp
 obs_reference = 'Coutts, Beringer and Tapper (2007a): https://doi.org/10.1175/JAM2462.1; Coutts, Beringer and Tapper (2007b) https://doi.org/10.1016/j.atmosenv.2006.08.030'
 obs_comment = '-'
 photo_source='[Coutts et al. (2007)](http://doi.org/10.1016/j.atmosenv.2006.08.030)'
-history = 'v0.9 (2021-09-08): beta issue'
+history = 'v0.9 (2021-09-08): beta issue; v1 (2022-09-15): with publication in ESSD'
 
 ##########################################################################
 # MAIN

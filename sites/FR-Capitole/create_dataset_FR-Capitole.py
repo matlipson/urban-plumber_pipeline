@@ -2,14 +2,14 @@
 Urban-PLUMBER processing code
 Associated with the manuscript: Harmonized, gap-filled dataset from 20 urban flux tower sites
 
-Copyright (c) 2021 Mathew Lipson
+Copyright (c) 2022 Mathew Lipson
 
 Licensed under the Apache License, Version 2.0 (the "License").
 You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 '''
 
 __title__ = "site-specific processing wrapper"
-__version__ = "2021-09-20"
+__version__ = "2022-09-15"
 __author__ = "Mathew Lipson"
 __email__ = "m.lipson@unsw.edu.au"
 __description__ = 'Wrapper for processing individual sites. Includes setting site-specific information, importing raw site data, calling pipeline functions, creating site plots and webpages etc.'
@@ -83,7 +83,7 @@ if args.existing:
 ##########################################################################
 
 sitename = 'FR-Capitole'
-out_suffix = 'v0.9'
+out_suffix = 'v1'
 sitedata_suffix = 'v1'
 
 local_utc_offset_hours = 1
@@ -92,7 +92,7 @@ obs_contact = 'Valéry Masson (valery.masson@meteo.fr)'
 obs_reference = 'Masson, Gomes, Pigeon, Liousse, Pont, Lagouarde, Voogt, Salmond, Oke, Hidalgo, Legain, Garrouste, Lac, Connan, Briottet, Lachérade, Tulet (2008): https://doi.org/10.1007/s00703-008-0289-4; Goret, Masson, Schoetter, Moine (2019): https://doi.org/10.1016/j.aeaoa.2019.100042'
 obs_comment = 'Observation height varied depending on windspeed. All observations at lowest tower position (~27m) excluded, with wind speed corrected using log laws, following Goret et al. (2019) https://doi.org/10.1016/j.aeaoa.2019.100042. Gap-filling from local observations by CNRM. ERA5 snowfall set to zero during analysis period per advice from CNRM.'
 photo_source='V. Masson'
-history = 'v0.9 (2021-09-08): beta issue'
+history = 'v0.9 (2021-09-08): beta issue; v1 (2022-09-15): with publication in ESSD'
 
 ##########################################################################
 # MAIN
